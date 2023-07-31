@@ -1,3 +1,9 @@
 **/__pycache__/
 .idea/
 **/.DS_Store
+**/*.pyc
+**/checkpoints/
+**/checkpoints_backup/
+**/models/
+**/runs/
+**/runs_backup/

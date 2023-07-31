@@ -3,20 +3,21 @@
 import os
 import logging
 import random
+import time
 from typing import Tuple, Sequence, List, Union
 
 from PIL import Image
 import torch
 from torch import Tensor
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
 
 logger = logging.getLogger(__name__)
 
 
-class RandAugmentationDataSet(IterableDataset):
+class RandAugmentationDataSet(Dataset):
 
     def __init__(self,
                  path: str,
@@ -36,56 +37,64 @@ class RandAugmentationDataSet(IterableDataset):
         self._image_list = None
         self.limit = limit
         self.output_size = output_size
-        self._current = 0
+        self._current = 1
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         # augmentation prob
         self.hflip_p = hflip_p
         self.vflip_p = vflip_p
         self.rotation_p = rotation_p
         self.color_distortion_p = color_distortion_p
         # rotation params
-        self.rotate_degrees = [60, 90, 180, 270] if rotation_degrees is None else rotation_degrees
+        self.rotate_degrees = [30, 60, 90, 120, 150, 180, 210, 240, 270] if rotation_degrees is None else rotation_degrees
         self.rotate_options = {
-            "interpolation": F.InterpolationMode.BICUBIC,
+            "interpolation": F.InterpolationMode.BILINEAR,
             "expand": False,
             "center": None,
             "fill": 0,
+        }
+        # color params
+        self.color_options = {
+            "brightness": None,
+            "contrast": None,
+            "saturation": None,
+            "hue": [-0.5, 0.5]
+        }
+        # noise params
+        self.noise_options = {
+            "mean": 0,
+            "std": 0.01,
         }
 
     @property
     def image_list(self):
         if self._image_list is None:
-            self._image_list = [name for name in os.listdir()
-                      if name.lower().endswith(("tiff", "tif"))
+            self._image_list = [name for name in os.listdir(self.origin_path)
+                      if name.lower().endswith(("tiff", "tif", "png"))
                       and os.path.isfile(f"{self.origin_path}{os.path.sep}{name}")]
         if not self._image_list:
             raise ValueError(f"Empty DataSet {self.origin_path}")
         return self._image_list
 
-    def _normalize_input_image(self, origin: Image, reduced: Image):
-        """归一化输入
-        - 颜色空间
-        - 检测尺寸
-        - """
-        assert origin.size() == reduced.size()
-        return origin, reduced
+    def normalize(self, origin: Tensor, reduced: Tensor):
+        return origin.float().div_(255.0), reduced.float().div_(255.0)
 
     def _rand_crop(self, origin: Tensor, reduced: Tensor):
         """随机裁切"""
         options = RandomCrop.get_params(origin, self.output_size)
-        logger.info(f"Crop: {options}")
+        logger.debug(f"Crop: {options}")
         return F.crop(origin, *options), F.crop(reduced, *options)
 
     def _rand_hflip(self, origin: Tensor, reduced: Tensor):
         """随机水平翻转"""
         if torch.rand(1) < self.hflip_p:
-            logger.info(f"HFlip")
+            logger.debug(f"HFlip")
             return F.hflip(origin), F.hflip(reduced)
         return origin, reduced
 
     def _rand_vflip(self, origin: Tensor, reduced: Tensor):
         """随机垂直翻转"""
         if torch.rand(1) < self.vflip_p:
-            logger.info(f"VFlip")
+            logger.debug(f"VFlip")
             return F.vflip(origin), F.vflip(reduced)
         return origin, reduced
 
@@ -108,11 +117,33 @@ class RandAugmentationDataSet(IterableDataset):
             "angle": angle,
             "fill": fill,
         })
-        logger.info(f"Rotate: {angle}")
+        logger.debug(f"Rotate: {angle}")
         return F.rotate(origin, **options), F.rotate(reduced, **options)
+
+    def _rand_noise(self, origin: Tensor, reduced: Tensor):
+        # 高斯噪声
+        noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
+        noise = noise.to(origin.device)
+        origin.float().add_(noise)
+        return origin, reduced.float()
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
         """随机色差"""
+        if torch.rand(1) < 0.7:
+            fn_idx, brightness_factor, contrast_factor, saturation_factor, hue_factor = ColorJitter.get_params(**self.color_options)
+            for fn_id in fn_idx:
+                if fn_id == 0 and brightness_factor is not None:
+                    origin = F.adjust_brightness(origin, brightness_factor)
+                    reduced = F.adjust_brightness(reduced, brightness_factor)
+                elif fn_id == 1 and contrast_factor is not None:
+                    origin = F.adjust_contrast(origin, contrast_factor)
+                    reduced = F.adjust_contrast(reduced, contrast_factor)
+                elif fn_id == 2 and saturation_factor is not None:
+                    origin = F.adjust_saturation(origin, saturation_factor)
+                    reduced = F.adjust_saturation(reduced, saturation_factor)
+                elif fn_id == 3 and hue_factor is not None:
+                    origin = F.adjust_hue(origin, hue_factor)
+                    reduced = F.adjust_hue(reduced, hue_factor)
         return origin, reduced
 
     def _rand_image_file(self):
@@ -129,9 +160,11 @@ class RandAugmentationDataSet(IterableDataset):
         """PIL Image 转换为 Tensor"""
         return F.pil_to_tensor(origin), F.pil_to_tensor(reduced)
 
-    def rand_transform(self, origin: Image, reduced: Image):
+    def rand_transform(self, origin: Tensor, reduced: Tensor):
         # 裁切 (256, 256)
         origin, reduced = self._rand_crop(origin, reduced)
+        # 高斯噪声
+        origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
         origin, reduced = self._rand_hflip(origin, reduced)
         # 随机垂直翻转
@@ -140,20 +173,40 @@ class RandAugmentationDataSet(IterableDataset):
         origin, reduced = self._rand_rotate(origin, reduced)
         # 随机转色
         origin, reduced = self._rand_color_distort(origin, reduced)
+
         return origin, reduced
 
-    def __iter__(self):
-        return self
+    def __len__(self):
+        return self.limit
 
-    def __next__(self):
-        while self._current < self.limit:
-            origin_file, reduced_file = self._rand_image_file()
-            with Image.open(origin_file) as origin_pil, \
-                    Image.open(reduced_file) as reduced_pil:
-                origin_pil, reduced_pil = self._normalize_input_image(origin_pil, reduced_pil)
-                origin, reduced = self.to_tensor(origin_pil, reduced_pil)
-                origin, reduced = self.rand_transform(origin, reduced)
-                yield origin, reduced
-            self._current += 1
-        else:
-            raise StopIteration
+    def __getitem__(self, item):
+        origin_file, reduced_file = self._rand_image_file()
+        with Image.open(origin_file) as origin_pil, \
+                Image.open(reduced_file) as reduced_pil:
+            origin, reduced = self.to_tensor(origin_pil, reduced_pil)
+            origin, reduced = origin.to(self.device), reduced.to(self.device)
+            origin, reduced = self.normalize(origin, reduced)
+            origin, reduced = self.rand_transform(origin, reduced)
+            return origin, reduced
+
+
+if __name__ == '__main__':
+    cwd = os.path.abspath(os.path.dirname(__file__))
+    image_dir = "images"
+    dataset_dir = os.path.join(cwd, image_dir)
+    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
+    from torchvision.transforms import ToPILImage
+    to_pil = ToPILImage(mode="RGB")
+    # for origin, reduced in dataset:
+    origin, reduced = dataset[0]
+    print(origin.shape, reduced.shape)
+    origin = to_pil(origin)
+    origin.show()
+    reduced = to_pil(reduced)
+    reduced.show()
+
+    # from torch.utils.data import DataLoader
+    #
+    # loader = DataLoader(dataset=dataset, batch_size=64)
+    # for train, target in loader:
+    #     print(len(train), len(target))
