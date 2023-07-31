@@ -10,7 +10,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,13 @@ class RandAugmentationDataSet(IterableDataset):
             "expand": False,
             "center": None,
             "fill": 0,
+        }
+        # color params
+        self.color_options = {
+            "brightness": None,
+            "contrast": None,
+            "saturation": None,
+            "hue": None
         }
 
     @property
@@ -113,6 +120,21 @@ class RandAugmentationDataSet(IterableDataset):
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
         """随机色差"""
+        if torch.rand(1) < 0.7:
+            fn_idx, brightness_factor, contrast_factor, saturation_factor, hue_factor = ColorJitter.get_params(**self.color_options)
+            for fn_id in fn_idx:
+                if fn_id == 0 and brightness_factor is not None:
+                    origin = F.adjust_brightness(origin, brightness_factor)
+                    reduced = F.adjust_brightness(reduced, brightness_factor)
+                elif fn_id == 1 and contrast_factor is not None:
+                    origin = F.adjust_contrast(origin, contrast_factor)
+                    reduced = F.adjust_contrast(reduced, contrast_factor)
+                elif fn_id == 2 and saturation_factor is not None:
+                    origin = F.adjust_saturation(origin, saturation_factor)
+                    reduced = F.adjust_saturation(reduced, saturation_factor)
+                elif fn_id == 3 and hue_factor is not None:
+                    origin = F.adjust_hue(origin, hue_factor)
+                    reduced = F.adjust_hue(reduced, hue_factor)
         return origin, reduced
 
     def _rand_image_file(self):
