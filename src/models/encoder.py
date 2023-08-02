@@ -1,21 +1,85 @@
 # -*- coding:utf-8 -*-
 
+from typing import Type, Union
+from collections import OrderedDict
+
 from torch import nn
-from torchvision.models.resnet import resnet18
+from torchvision.models.resnet import Bottleneck, BasicBlock, conv1x1
 
 
 class ResidualEncoder(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.encoder = self._init_encoder()
-
-    def _init_module(self):
-        origin_resnet18 = resnet18(pretrained=False)
-        return nn.Sequential(
-            *list(origin_resnet18.children())[:-2]
+        self.inplanes = 64
+        self.dilation = 1
+        self.groups = 1
+        self.base_width = 64
+        self._norm_layer = nn.BatchNorm2d
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False),
+            self._norm_layer(self.inplanes),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
+        self.body = nn.Sequential(OrderedDict([
+            ("Bottleneck1", self._make_layer(Bottleneck, 64, 2)),
+            ("Bottleneck2", self._make_layer(Bottleneck, 128, 2, stride=2)),
+            ("Bottleneck3", self._make_layer(Bottleneck, 256, 2, stride=2)),
+            ("Bottleneck4", self._make_layer(Bottleneck, 512, 2, stride=2)),
+        ]))
+
+    def _make_layer(
+        self,
+        block: Type[Union[BasicBlock, Bottleneck]],
+        planes: int,
+        blocks: int,
+        stride: int = 1,
+        dilate: bool = False,
+    ) -> nn.Sequential:
+        norm_layer = self._norm_layer
+        downsample = None
+        previous_dilation = self.dilation
+        if dilate:
+            self.dilation *= stride
+            stride = 1
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes * block.expansion, stride),
+                norm_layer(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(
+            block(
+                self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation, norm_layer
+            )
+        )
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(
+                block(
+                    self.inplanes,
+                    planes,
+                    groups=self.groups,
+                    base_width=self.base_width,
+                    dilation=self.dilation,
+                    norm_layer=norm_layer,
+                )
+            )
+
+        return nn.Sequential(*layers)
+
 
     def forward(self, x):
-        out = self.encoder(x)
+        out = self.stem(x)
+        out = self.body(out)
         return out
+
+
+if __name__ == '__main__':
+    encoder = ResidualEncoder()
+    print(encoder)
+    import torch
+    x = torch.rand(size=(1, 3, 256, 256))
+    print(encoder(x).shape)
