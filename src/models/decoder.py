@@ -21,15 +21,12 @@ class TransposeDecoder(nn.Module):
         self._norm_layer = nn.BatchNorm2d
         self.body = nn.Sequential(OrderedDict([
             ("TransposeBottleneck1", self._make_transpose(TransposeBottleneck, 2048, 2, stride=2)),
-            ("TransposeBottleneck2", self._make_transpose(TransposeBottleneck, 1024, 2, stride=2)),
-            ("TransposeBottleneck3", self._make_transpose(TransposeBottleneck, 512, 2, stride=2)),
-            ("TransposeBottleneck4", self._make_transpose(TransposeBottleneck, 256, 2, stride=2)),
+            ("TransposeBottleneck2", self._make_transpose(TransposeBottleneck, 512, 2, stride=2)),
+            ("TransposeBottleneck3", self._make_transpose(TransposeBottleneck, 256, 2, stride=2)),
+            ("TransposeBottleneck4", self._make_transpose(TransposeBottleneck, 64, 2, stride=2)),
         ]))
         self.head = nn.Sequential(
-            nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2),
-            conv1x1(3, 3, stride=1),
-            self._norm_layer(3),
-            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(16, 3, kernel_size=2, stride=2, bias=True),
         )
 
     def _make_transpose(
