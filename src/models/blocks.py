@@ -29,11 +29,10 @@ class TransposeBottleneck(nn.Module):
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 2048.0)) * groups
-        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
         if upsample:
-            self.conv2 = nn.ConvTranspose2d(width, width, kernel_size=2, stride=stride, bias=False)
+            self.conv2 = nn.ConvTranspose2d(width, width, kernel_size=4, stride=stride, padding=1, bias=False)
         else:
             self.conv2 = nn.ConvTranspose2d(width, width, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = norm_layer(width)
