@@ -3,6 +3,7 @@
 import os
 import logging
 import random
+import time
 from typing import Tuple, Sequence, List, Union
 
 from PIL import Image
@@ -36,7 +37,7 @@ class RandAugmentationDataSet(IterableDataset):
         self._image_list = None
         self.limit = limit
         self.output_size = output_size
-        self._current = 0
+        self._current = 1
         # augmentation prob
         self.hflip_p = hflip_p
         self.vflip_p = vflip_p
@@ -45,7 +46,7 @@ class RandAugmentationDataSet(IterableDataset):
         # rotation params
         self.rotate_degrees = [60, 90, 180, 270] if rotation_degrees is None else rotation_degrees
         self.rotate_options = {
-            "interpolation": F.InterpolationMode.BICUBIC,
+            "interpolation": F.InterpolationMode.BILINEAR,
             "expand": False,
             "center": None,
             "fill": 0,
@@ -55,13 +56,13 @@ class RandAugmentationDataSet(IterableDataset):
             "brightness": None,
             "contrast": None,
             "saturation": None,
-            "hue": None
+            "hue": [-0.5, 0.5]
         }
 
     @property
     def image_list(self):
         if self._image_list is None:
-            self._image_list = [name for name in os.listdir()
+            self._image_list = [name for name in os.listdir(self.origin_path)
                       if name.lower().endswith(("tiff", "tif"))
                       and os.path.isfile(f"{self.origin_path}{os.path.sep}{name}")]
         if not self._image_list:
@@ -73,7 +74,7 @@ class RandAugmentationDataSet(IterableDataset):
         - 颜色空间
         - 检测尺寸
         - """
-        assert origin.size() == reduced.size()
+        assert origin.size == reduced.size
         return origin, reduced
 
     def _rand_crop(self, origin: Tensor, reduced: Tensor):
@@ -168,14 +169,35 @@ class RandAugmentationDataSet(IterableDataset):
         return self
 
     def __next__(self):
-        while self._current < self.limit:
+        if self._current <= self.limit:
             origin_file, reduced_file = self._rand_image_file()
+            self._current += 1
             with Image.open(origin_file) as origin_pil, \
                     Image.open(reduced_file) as reduced_pil:
                 origin_pil, reduced_pil = self._normalize_input_image(origin_pil, reduced_pil)
                 origin, reduced = self.to_tensor(origin_pil, reduced_pil)
                 origin, reduced = self.rand_transform(origin, reduced)
-                yield origin, reduced
-            self._current += 1
+                return origin, reduced
         else:
             raise StopIteration
+
+
+if __name__ == '__main__':
+    cwd = os.path.abspath(os.path.dirname(__file__))
+    image_dir = "images"
+    dataset_dir = os.path.join(cwd, image_dir)
+    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=64)
+    from torchvision.transforms import ToPILImage
+    to_pil = ToPILImage(mode="RGB")
+    # for origin, reduced in dataset:
+    #     print(origin.shape, reduced.shape)
+    #     origin = to_pil(origin)
+    #     origin.show()
+    #     reduced = to_pil(reduced)
+    #     reduced.show()
+
+    from torch.utils.data import DataLoader
+
+    loader = DataLoader(dataset=dataset, batch_size=64)
+    for train, target in loader:
+        print(len(train), len(target))

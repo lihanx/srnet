@@ -39,12 +39,14 @@
 
 - [x] AugmentationDataSet 随机增强数据集
   - [x] 使用 PhotoShop 处理原始数据集
-  - [ ] _normalize_input_image 实现
+  - [x] _normalize_input_image 实现
   - [x] _rand_color_distort 实现
-- [ ] DataLoader 数据加载器测试
+  - [ ] 添加高斯噪声和椒盐噪声
+- [x] DataLoader 数据加载器测试
 - [ ] SRNetTrainer 训练模型
-  - [ ] 收敛过程记录到 csv 用于绘图
-- [ ] SRNet/ResNetEncoder/Decoder
+  - [ ] 记录收敛过程用于绘图
+- [x] SRNet/ResNetEncoder/Decoder
 - [ ] SRNetTransformer 处理图片
   - [ ] 中间状态的 feature map 保存，用于论文图示
 - [ ] SSIM/PSNR
+  - [ ] SSIMLoss
