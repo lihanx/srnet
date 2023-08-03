@@ -3,7 +3,7 @@
 from typing import Type, Union
 from collections import OrderedDict
 
-from torch import nn
+from torch import nn, Tensor
 from torchvision.models.resnet import Bottleneck, BasicBlock, conv1x1
 
 
@@ -71,7 +71,7 @@ class ResidualEncoder(nn.Module):
         return nn.Sequential(*layers)
 
 
-    def forward(self, x):
+    def forward(self, x: Tensor):
         out = self.stem(x)
         out = self.body(out)
         return out

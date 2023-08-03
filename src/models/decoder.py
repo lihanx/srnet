@@ -4,8 +4,7 @@ from typing import Type
 from collections import OrderedDict
 
 import torch
-from torch import nn
-from torchvision.models.resnet import conv1x1
+from torch import nn, Tensor
 
 from blocks import TransposeBottleneck
 
@@ -23,10 +22,11 @@ class TransposeDecoder(nn.Module):
             ("TransposeBottleneck1", self._make_transpose(TransposeBottleneck, 2048, 2, stride=2)),
             ("TransposeBottleneck2", self._make_transpose(TransposeBottleneck, 1024, 2, stride=2)),
             ("TransposeBottleneck3", self._make_transpose(TransposeBottleneck, 512, 2, stride=2)),
-            ("TransposeBottleneck4", self._make_transpose(TransposeBottleneck, 256, 2, stride=2)),
         ]))
         self.head = nn.Sequential(
+            nn.ConvTranspose2d(256, 64, kernel_size=2, stride=2, bias=True),
             nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
+            self._norm_layer(3)
         )
 
     def _make_transpose(
@@ -40,7 +40,7 @@ class TransposeDecoder(nn.Module):
         upsample = None
         if stride != 1 or self.inplanes != int(planes * block.contraction):
             upsample = nn.Sequential(
-                nn.ConvTranspose2d(self.inplanes, int(planes * block.contraction), kernel_size=2, stride=2),
+                nn.ConvTranspose2d(self.inplanes, int(planes * block.contraction), kernel_size=4, stride=2, padding=1),
                 norm_layer(int(planes * block.contraction)),
             )
 
@@ -64,7 +64,7 @@ class TransposeDecoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: Tensor):
         out = self.body(x)
         out = self.head(out)
         return out
