@@ -58,6 +58,11 @@ class RandAugmentationDataSet(IterableDataset):
             "saturation": None,
             "hue": [-0.5, 0.5]
         }
+        # noise params
+        self.noise_options = {
+            "mean": 0,
+            "std": 1,
+        }
 
     @property
     def image_list(self):
@@ -119,6 +124,12 @@ class RandAugmentationDataSet(IterableDataset):
         logger.info(f"Rotate: {angle}")
         return F.rotate(origin, **options), F.rotate(reduced, **options)
 
+    def _rand_noise(self, origin: Tensor, reduced: Tensor):
+        # 高斯噪声
+        noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
+        origin = origin.float() + noise
+        return origin, reduced.float()
+
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
         """随机色差"""
         if torch.rand(1) < 0.7:
@@ -152,7 +163,7 @@ class RandAugmentationDataSet(IterableDataset):
         """PIL Image 转换为 Tensor"""
         return F.pil_to_tensor(origin), F.pil_to_tensor(reduced)
 
-    def rand_transform(self, origin: Image, reduced: Image):
+    def rand_transform(self, origin: Tensor, reduced: Tensor):
         # 裁切 (256, 256)
         origin, reduced = self._rand_crop(origin, reduced)
         # 随机水平翻转
@@ -160,9 +171,12 @@ class RandAugmentationDataSet(IterableDataset):
         # 随机垂直翻转
         origin, reduced = self._rand_vflip(origin, reduced)
         # 随机旋转特定角度
-        origin, reduced = self._rand_rotate(origin, reduced)
+        # origin, reduced = self._rand_rotate(origin, reduced)
         # 随机转色
-        origin, reduced = self._rand_color_distort(origin, reduced)
+        # origin, reduced = self._rand_color_distort(origin, reduced)
+        # 高斯噪声
+        origin, reduced = self._rand_noise(origin, reduced)
+        print(origin, reduced)
         return origin, reduced
 
     def __iter__(self):
@@ -186,18 +200,18 @@ if __name__ == '__main__':
     cwd = os.path.abspath(os.path.dirname(__file__))
     image_dir = "images"
     dataset_dir = os.path.join(cwd, image_dir)
-    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=64)
+    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
     from torchvision.transforms import ToPILImage
     to_pil = ToPILImage(mode="RGB")
-    # for origin, reduced in dataset:
-    #     print(origin.shape, reduced.shape)
-    #     origin = to_pil(origin)
-    #     origin.show()
-    #     reduced = to_pil(reduced)
-    #     reduced.show()
+    for origin, reduced in dataset:
+        print(origin.shape, reduced.shape)
+        origin = to_pil(origin/255.0)
+        origin.show()
+        reduced = to_pil(reduced/255.0)
+        reduced.show()
 
-    from torch.utils.data import DataLoader
-
-    loader = DataLoader(dataset=dataset, batch_size=64)
-    for train, target in loader:
-        print(len(train), len(target))
+    # from torch.utils.data import DataLoader
+    #
+    # loader = DataLoader(dataset=dataset, batch_size=64)
+    # for train, target in loader:
+    #     print(len(train), len(target))

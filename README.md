@@ -45,8 +45,8 @@
 - [x] DataLoader 数据加载器测试
 - [ ] SRNetTrainer 训练模型
   - [ ] 记录收敛过程用于绘图
+  - [ ] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
 - [ ] SRNetTransformer 处理图片
   - [ ] 中间状态的 feature map 保存，用于论文图示
-- [ ] SSIM/PSNR
-  - [ ] SSIMLoss
+- [ ] SSIM/PSNR 指标
