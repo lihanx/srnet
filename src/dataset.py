@@ -61,26 +61,21 @@ class RandAugmentationDataSet(IterableDataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 1,
+            "std": 0.01,
         }
 
     @property
     def image_list(self):
         if self._image_list is None:
             self._image_list = [name for name in os.listdir(self.origin_path)
-                      if name.lower().endswith(("tiff", "tif"))
+                      if name.lower().endswith(("tiff", "tif", "png"))
                       and os.path.isfile(f"{self.origin_path}{os.path.sep}{name}")]
         if not self._image_list:
             raise ValueError(f"Empty DataSet {self.origin_path}")
         return self._image_list
 
-    def _normalize_input_image(self, origin: Image, reduced: Image):
-        """归一化输入
-        - 颜色空间
-        - 检测尺寸
-        - """
-        assert origin.size == reduced.size
-        return origin, reduced
+    def normalize(self, origin: Tensor, reduced: Tensor):
+        return origin.float().div_(255.0), reduced.float().div_(255.0)
 
     def _rand_crop(self, origin: Tensor, reduced: Tensor):
         """随机裁切"""
@@ -127,7 +122,7 @@ class RandAugmentationDataSet(IterableDataset):
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
         noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
-        origin = origin.float() + noise
+        origin.float().add_(noise)
         return origin, reduced.float()
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
@@ -166,17 +161,17 @@ class RandAugmentationDataSet(IterableDataset):
     def rand_transform(self, origin: Tensor, reduced: Tensor):
         # 裁切 (256, 256)
         origin, reduced = self._rand_crop(origin, reduced)
+        # 高斯噪声
+        origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
         origin, reduced = self._rand_hflip(origin, reduced)
         # 随机垂直翻转
         origin, reduced = self._rand_vflip(origin, reduced)
         # 随机旋转特定角度
-        # origin, reduced = self._rand_rotate(origin, reduced)
+        origin, reduced = self._rand_rotate(origin, reduced)
         # 随机转色
-        # origin, reduced = self._rand_color_distort(origin, reduced)
-        # 高斯噪声
-        origin, reduced = self._rand_noise(origin, reduced)
-        print(origin, reduced)
+        origin, reduced = self._rand_color_distort(origin, reduced)
+
         return origin, reduced
 
     def __iter__(self):
@@ -188,8 +183,8 @@ class RandAugmentationDataSet(IterableDataset):
             self._current += 1
             with Image.open(origin_file) as origin_pil, \
                     Image.open(reduced_file) as reduced_pil:
-                origin_pil, reduced_pil = self._normalize_input_image(origin_pil, reduced_pil)
                 origin, reduced = self.to_tensor(origin_pil, reduced_pil)
+                origin, reduced = self.normalize(origin, reduced)
                 origin, reduced = self.rand_transform(origin, reduced)
                 return origin, reduced
         else:
@@ -205,9 +200,9 @@ if __name__ == '__main__':
     to_pil = ToPILImage(mode="RGB")
     for origin, reduced in dataset:
         print(origin.shape, reduced.shape)
-        origin = to_pil(origin/255.0)
+        origin = to_pil(origin)
         origin.show()
-        reduced = to_pil(reduced/255.0)
+        reduced = to_pil(reduced)
         reduced.show()
 
     # from torch.utils.data import DataLoader
