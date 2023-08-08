@@ -22,12 +22,10 @@ class ResidualEncoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
-        self.body = nn.Sequential(OrderedDict([
-            ("Bottleneck1", self._make_layer(Bottleneck, 64, 2)),
-            ("Bottleneck2", self._make_layer(Bottleneck, 128, 2, stride=2)),
-            ("Bottleneck3", self._make_layer(Bottleneck, 256, 2, stride=2)),
-            ("Bottleneck4", self._make_layer(Bottleneck, 512, 2, stride=2)),
-        ]))
+        self.res_1 = self._make_layer(Bottleneck, 64, 2)
+        self.res_2 = self._make_layer(Bottleneck, 128, 2, stride=2)
+        self.res_3 = self._make_layer(Bottleneck, 256, 2, stride=2)
+        self.res_4 = self._make_layer(Bottleneck, 512, 2, stride=2)
 
     def _make_layer(
         self,
@@ -73,8 +71,12 @@ class ResidualEncoder(nn.Module):
 
     def forward(self, x: Tensor):
         out = self.stem(x)
-        out = self.body(out)
-        return out
+        print("stem:", out.shape)
+        out = f1 = self.res_1(out)
+        out = f2 = self.res_2(out)
+        out = f3 = self.res_3(out)
+        out = self.res_4(out)
+        return f1, f2, f3, out
 
 
 if __name__ == '__main__':

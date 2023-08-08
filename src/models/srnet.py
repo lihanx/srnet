@@ -15,8 +15,8 @@ class SRNet(nn.Module):
         self.decoder = TransposeDecoder()
 
     def forward(self, x: Tensor):
-        feature_map = self.encoder(x)
-        out = self.decoder(feature_map)
+        f1, f2, f3, out = self.encoder(x)
+        out = self.decoder(out, f1, f2, f3)
         return out
 
 
