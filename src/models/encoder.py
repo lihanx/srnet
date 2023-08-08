@@ -84,4 +84,4 @@ if __name__ == '__main__':
     print(encoder)
     import torch
     x = torch.rand(size=(1, 3, 256, 256))
-    print(encoder(x).shape)
+    print(encoder.stem(x).shape)
