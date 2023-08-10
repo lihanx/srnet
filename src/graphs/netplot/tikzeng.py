@@ -47,8 +47,8 @@ def to_Conv( name, s_filer=256, n_filer=64, offset="(0,0,0)", to="(0,0,0)", widt
     {Box={
         name=""" + name +""",
         caption="""+ caption +r""",
-        xlabel={{"""+ str(n_filer) +""", }},
-        zlabel="""+ str(s_filer) +""",
+        xlabel={{ """+ str(s_filer) + """, }},
+        zlabel="""+ f"{n_filer}x{n_filer}" +""",
         fill=\ConvColor,
         height="""+ str(height) +""",
         width="""+ str(width) +""",
@@ -65,8 +65,8 @@ def to_ConvConvRelu( name, s_filer=256, n_filer=(64,64), offset="(0,0,0)", to="(
     {RightBandedBox={
         name="""+ name +""",
         caption="""+ caption +""",
-        xlabel={{ """+ str(n_filer[0]) +""", """+ str(n_filer[1]) +""" }},
-        zlabel="""+ str(s_filer) +""",
+        xlabel={{ """+ str(n_filer[0]) + """, }},
+        zlabel="""+ f"{s_filer}x{s_filer}" +""",
         fill=\ConvColor,
         bandfill=\ConvReluColor,
         height="""+ str(height) +""",
@@ -194,6 +194,16 @@ def to_skip( of, to, pos=1.25):
 -- node {\copymidarrow} ("""+to+"""-north);
 """
 
+def to_skip_by_offset( of, to, pos=1.25):
+    return r"""
+\path ("""+ of +"""-southeast) -- ("""+ of +"""-northeast) coordinate[pos="""+ str(pos) +"""] ("""+ of +"""-top) ;
+\path ("""+ to +"""-south)  -- ("""+ to +"""-north)  coordinate[pos="""+ str(pos) +"""] ("""+ to +"""-top) ;
+\draw [copyconnection]  ("""+of+"""-northeast)  
+-- node {\copymidarrow}("""+of+"""-top)
+-- node {\copymidarrow}("""+to+"""-top)
+-- node {\copymidarrow} ("""+to+"""-north);
+"""
+
 def to_end():
     return r"""
 \end{tikzpicture}
@@ -204,7 +214,7 @@ def to_end():
 def to_generate( arch, pathname="file.tex" ):
     with open(pathname, "w") as f: 
         for c in arch:
-            print(c)
+            # print(c)
             f.write( c )
      
 
