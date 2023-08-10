@@ -19,7 +19,7 @@ class SRNetTrainer:
         self.learning_rate = 1e-4
         self.batch_size = 64
         cwd = os.path.abspath(os.path.dirname(__file__))
-        self.dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=100000)
+        self.dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=640000)
         self.train_dataloader = DataLoader(self.dataset, batch_size=self.batch_size)
         self.test_dataloader = DataLoader(self.dataset, batch_size=self.batch_size)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -31,11 +31,29 @@ class SRNetTrainer:
         self.lr_epoch_per_decay = 100
         self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
 
-    def _test(self):...
+    def _train(self):
+        for batch_idx, (x, y) in enumerate(self.train_dataloader):
+            self.optimizer.zero_grad()
+            pred = self.net(x)
+            loss = self.loss_fn(pred, y)
+            # BackPropagation
+            loss.backward()
+            self.optimizer.step()
 
-    def _train(self):...
+    def _test(self):
+        self.net.eval()
+        test_loss, correct = 0, 0
+        with torch.no_grad():
+            for x, y in self.test_dataloader:
+                pred = self.net(x)
+                test_loss += self.loss_fn(pred, y).item()
+
+        test_loss,
 
     def train(self):
         for epoch in range(self.epochs):
-            self.scheduler.step(epoch)
+            self._train()
+            self._test()
+            self.scheduler.step()
+
 
