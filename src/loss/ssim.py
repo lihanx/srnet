@@ -77,7 +77,7 @@ class SSIMLoss(torch.nn.Module):
         self.ssim_fn = SSIMFunc(window_size, size_average)
 
     def forward(self, image: Tensor, target: Tensor):
-        return -self.ssim_fn(image, target)
+        return 1 - self.ssim_fn(image, target)
 
 
 if __name__ == '__main__':

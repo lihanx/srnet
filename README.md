@@ -34,6 +34,25 @@
 
 *缩星过程中使用的数字参数值均为经验值，可以根据个人需求调整*
 
+<br/>
+
+## 训练及超参相关资料
+
+### 训练
+- [训练流程](https://pytorch.org/tutorials/beginner/introyt/trainingyt.html#training-with-pytorch)
+- [超参(Hyperparameters)](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#hyperparameters)
+- [优化](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#optimization-loop)
+- [优化参考](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#full-implementation)
+
+### 优化
+- [优化器使用(How to use an optimizer)](https://pytorch.org/docs/stable/optim.html#how-to-use-an-optimizer)
+- [调整学习率(How to adjust learning rate)](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
+- [优化代码参考](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#full-implementation)
+
+### 模型权重
+- [保存/加载模型](https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-and-loading-models)
+- [Checkpoint](https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html#saving-and-loading-a-general-checkpoint-in-pytorch)
+
 
 ## Todo List
 
@@ -41,11 +60,11 @@
   - [x] 使用 PhotoShop 处理原始数据集
   - [x] _normalize_input_image 实现
   - [x] _rand_color_distort 实现
-  - [ ] 添加高斯噪声和椒盐噪声
+  - [x] 添加高斯噪声
 - [x] DataLoader 数据加载器测试
-- [ ] SRNetTrainer 训练模型
+- [ ] SRNetTrainer 实现
   - [ ] 记录收敛过程用于绘图
-  - [ ] 实现 SSIMLoss
+  - [x] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
 - [ ] SRNetTransformer 处理图片
   - [ ] 中间状态的 feature map 保存，用于论文图示
