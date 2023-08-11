@@ -29,8 +29,8 @@
 import torch
 from torch import nn, Tensor
 
-from encoder import ResidualEncoder
-from decoder import TransposeDecoder
+from .encoder import ResidualEncoder
+from .decoder import TransposeDecoder
 
 
 class SRNet(nn.Module):

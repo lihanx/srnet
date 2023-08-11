@@ -39,14 +39,9 @@ class TransposeBasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        # out = self.conv3(out)
-        # out = self.bn3(out)
-        # print(out.shape)
         if self.upsample is not None:
             identity = self.upsample(x)
-            # print(identity.shape)
 
         out += identity
         out = self.relu(out)
-        print("Decode(out):", out.shape)
         return out

@@ -6,7 +6,7 @@ from collections import OrderedDict
 import torch
 from torch import nn, Tensor
 
-from blocks import TransposeBasicBlock
+from .blocks import TransposeBasicBlock
 
 
 class TransposeDecoder(nn.Module):

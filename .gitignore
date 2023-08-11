@@ -2,3 +2,6 @@
 .idea/
 **/.DS_Store
 **/*.pyc
+**/checkpoints/
+**/models/
+**/runs/

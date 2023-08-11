@@ -71,7 +71,6 @@ class ResidualEncoder(nn.Module):
 
     def forward(self, x: Tensor):
         out = self.stem(x)
-        print("stem:", out.shape)
         out = f1 = self.res_1(out)
         out = f2 = self.res_2(out)
         out = f3 = self.res_3(out)

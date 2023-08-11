@@ -10,10 +10,10 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 
-from .dataset import RandAugmentationDataSet
-from .models import SRNet
-from .loss import SSIMLoss
-from .utils import _check_dir
+from dataset import RandAugmentationDataSet
+from models import SRNet
+from loss import SSIMLoss
+from utils import _check_dir
 
 
 logger = logging.getLogger(__name__)
@@ -108,10 +108,11 @@ class SRNetTrainer:
         return last_loss
 
     def train(self):
-
+        logger.info("Train start.")
         limit = 0.97
         best_ssim = 0.
         for epoch in range(self.epochs):
+            logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
             self.summary_writer.add_scalars(
@@ -129,3 +130,6 @@ class SRNetTrainer:
         logger.info("Done.")
 
 
+if __name__ == '__main__':
+    trainer = SRNetTrainer()
+    trainer.train()
