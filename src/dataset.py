@@ -80,20 +80,20 @@ class RandAugmentationDataSet(IterableDataset):
     def _rand_crop(self, origin: Tensor, reduced: Tensor):
         """随机裁切"""
         options = RandomCrop.get_params(origin, self.output_size)
-        logger.info(f"Crop: {options}")
+        logger.debug(f"Crop: {options}")
         return F.crop(origin, *options), F.crop(reduced, *options)
 
     def _rand_hflip(self, origin: Tensor, reduced: Tensor):
         """随机水平翻转"""
         if torch.rand(1) < self.hflip_p:
-            logger.info(f"HFlip")
+            logger.debug(f"HFlip")
             return F.hflip(origin), F.hflip(reduced)
         return origin, reduced
 
     def _rand_vflip(self, origin: Tensor, reduced: Tensor):
         """随机垂直翻转"""
         if torch.rand(1) < self.vflip_p:
-            logger.info(f"VFlip")
+            logger.debug(f"VFlip")
             return F.vflip(origin), F.vflip(reduced)
         return origin, reduced
 
@@ -116,7 +116,7 @@ class RandAugmentationDataSet(IterableDataset):
             "angle": angle,
             "fill": fill,
         })
-        logger.info(f"Rotate: {angle}")
+        logger.debug(f"Rotate: {angle}")
         return F.rotate(origin, **options), F.rotate(reduced, **options)
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
