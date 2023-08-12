@@ -9,7 +9,7 @@ from typing import Tuple, Sequence, List, Union
 from PIL import Image
 import torch
 from torch import Tensor
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
 from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
@@ -17,7 +17,7 @@ from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 logger = logging.getLogger(__name__)
 
 
-class RandAugmentationDataSet(IterableDataset):
+class RandAugmentationDataSet(Dataset):
 
     def __init__(self,
                  path: str,
@@ -174,21 +174,17 @@ class RandAugmentationDataSet(IterableDataset):
 
         return origin, reduced
 
-    def __iter__(self):
-        return self
+    def __len__(self):
+        return self.limit
 
-    def __next__(self):
-        if self._current <= self.limit:
-            origin_file, reduced_file = self._rand_image_file()
-            self._current += 1
-            with Image.open(origin_file) as origin_pil, \
-                    Image.open(reduced_file) as reduced_pil:
-                origin, reduced = self.to_tensor(origin_pil, reduced_pil)
-                origin, reduced = self.normalize(origin, reduced)
-                origin, reduced = self.rand_transform(origin, reduced)
-                return origin, reduced
-        else:
-            raise StopIteration
+    def __getitem__(self, item):
+        origin_file, reduced_file = self._rand_image_file()
+        with Image.open(origin_file) as origin_pil, \
+                Image.open(reduced_file) as reduced_pil:
+            origin, reduced = self.to_tensor(origin_pil, reduced_pil)
+            origin, reduced = self.normalize(origin, reduced)
+            origin, reduced = self.rand_transform(origin, reduced)
+            return origin, reduced
 
 
 if __name__ == '__main__':
@@ -198,12 +194,13 @@ if __name__ == '__main__':
     dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
     from torchvision.transforms import ToPILImage
     to_pil = ToPILImage(mode="RGB")
-    for origin, reduced in dataset:
-        print(origin.shape, reduced.shape)
-        origin = to_pil(origin)
-        origin.show()
-        reduced = to_pil(reduced)
-        reduced.show()
+    # for origin, reduced in dataset:
+    origin, reduced = dataset[0]
+    print(origin.shape, reduced.shape)
+    origin = to_pil(origin)
+    origin.show()
+    reduced = to_pil(reduced)
+    reduced.show()
 
     # from torch.utils.data import DataLoader
     #

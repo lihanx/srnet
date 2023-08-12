@@ -68,7 +68,6 @@ class ResidualEncoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-
     def forward(self, x: Tensor):
         out = self.stem(x)
         out = f1 = self.res_1(out)
