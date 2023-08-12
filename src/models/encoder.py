@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
 from typing import Type, Union
-from collections import OrderedDict
 
 from torch import nn, Tensor
 from torchvision.models.resnet import Bottleneck, BasicBlock, conv1x1
@@ -22,10 +21,10 @@ class ResidualEncoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
-        self.res_1 = self._make_layer(Bottleneck, 64, 2)
-        self.res_2 = self._make_layer(Bottleneck, 128, 2, stride=2)
-        self.res_3 = self._make_layer(Bottleneck, 256, 2, stride=2)
-        self.res_4 = self._make_layer(Bottleneck, 512, 2, stride=2)
+        self.res_1 = self._make_layer(BasicBlock, 64, 2)
+        self.res_2 = self._make_layer(BasicBlock, 128, 2, stride=2)
+        self.res_3 = self._make_layer(BasicBlock, 256, 2, stride=2)
+        self.res_4 = self._make_layer(BasicBlock, 512, 2, stride=2)
 
     def _make_layer(
         self,
@@ -71,9 +70,13 @@ class ResidualEncoder(nn.Module):
     def forward(self, x: Tensor):
         out = self.stem(x)
         out = f1 = self.res_1(out)
+        # print("f1:", f1.shape)
         out = f2 = self.res_2(out)
+        # print("f2:", f2.shape)
         out = f3 = self.res_3(out)
+        # print("f3:", f3.shape)
         out = self.res_4(out)
+        # print("out:", out.shape)
         return f1, f2, f3, out
 
 

@@ -1,8 +1,7 @@
 # -*- coding:utf-8 -*-
 
-from typing import Optional, Callable
 
-from torch import Tensor, nn
+from torch import nn
 
 
 def conv3x3(in_planes, out_planes, stride=1):
