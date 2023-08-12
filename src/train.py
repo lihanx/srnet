@@ -24,8 +24,8 @@ class SRNetTrainer:
     def __init__(self):
         self.epochs = 10000
         self.learning_rate = 1e-4
-        self.batch_size = 32
-        self.data_count = 3200
+        self.batch_size = 8
+        self.data_count = 1600
         cwd = os.path.abspath(os.path.dirname(__file__))
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
         _check_dir(self.checkpoint_path)
@@ -56,7 +56,7 @@ class SRNetTrainer:
             "epoch": epoch,
             "loss": self.loss_fn.state_dict(),
         }
-        filename = f"checkpoint_epoch{epoch}_loss{loss_val}"
+        filename = f"checkpoint_epoch{epoch}_loss{loss_val:.2f}"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
 
     def load_checkpoints(self):
@@ -126,7 +126,8 @@ class SRNetTrainer:
                 epoch+1
             )
             self.scheduler.step()
-            self.save_checkpoints(epoch, vloss)
+            if tloss < 0.3 and vloss < 0.3:
+                self.save_checkpoints(epoch, vloss)
             if tloss <= limit and vloss <= limit:
                 best_ssim = 1 - vloss
                 logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
