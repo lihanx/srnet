@@ -24,8 +24,8 @@ class SRNetTrainer:
     def __init__(self):
         self.epochs = 10000
         self.learning_rate = 1e-4
-        self.batch_size = 16
-        self.data_count = 1600
+        self.batch_size = 32
+        self.data_count = 3200
         cwd = os.path.abspath(os.path.dirname(__file__))
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
         _check_dir(self.checkpoint_path)
@@ -88,7 +88,7 @@ class SRNetTrainer:
             if batch_idx % 10 == 0:
                 last_loss = running_loss / 10
                 logger.info(f"Train batch {batch_idx} loss: {last_loss}")
-                tb_x = epoch * len(self.train_dataloader) + batch_idx
+                tb_x = epoch * len(self.train_dataloader) + batch_idx + 1
                 self.summary_writer.add_scalar("Loss/train", last_loss, tb_x)
                 running_loss = 0.
         return last_loss
@@ -105,7 +105,7 @@ class SRNetTrainer:
                 if batch_idx % 10 == 0:
                     last_loss = test_loss / 10
                     logger.info(f"Validate batch {batch_idx} loss: {last_loss}")
-                    tb_x = epoch * len(self.test_dataloader) + batch_idx
+                    tb_x = epoch * len(self.test_dataloader) + batch_idx + 1
                     self.summary_writer.add_scalar("Loss/validate", last_loss, tb_x)
                     self.summary_writer.add_images("Image/Origin", x, tb_x)
                     self.summary_writer.add_images("Image/Inference", pred, tb_x)
@@ -114,7 +114,7 @@ class SRNetTrainer:
 
     def train(self):
         logger.info("Train start.")
-        limit = 0.15
+        limit = 0.10
         best_ssim = 0.
         for epoch in range(self.epochs):
             logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
@@ -126,6 +126,7 @@ class SRNetTrainer:
                 epoch+1
             )
             self.scheduler.step()
+            self.save_checkpoints(epoch, vloss)
             if tloss <= limit and vloss <= limit:
                 best_ssim = 1 - vloss
                 logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
