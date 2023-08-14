@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+
 import datetime
 import os.path
 import logging
@@ -56,7 +57,7 @@ class SRNetTrainer:
             "epoch": epoch,
             "loss": self.loss_fn.state_dict(),
         }
-        filename = f"checkpoint_epoch{epoch}_loss{loss_val:.2f}"
+        filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.2f}"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
 
     def load_checkpoints(self):
