@@ -39,7 +39,7 @@ class TransposeDecoder(nn.Module):
         return nn.Sequential(
             nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(planes),
-            nn.ReLU(inplace=True)
+            # nn.ReLU(inplace=True)
         )
 
     def _make_transpose(self, block, planes, blocks, stride=1):

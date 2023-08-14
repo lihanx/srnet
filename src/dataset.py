@@ -123,7 +123,7 @@ class RandAugmentationDataSet(Dataset):
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
         noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
-        noise = noise.to(origin.device())
+        noise = noise.to(origin.device)
         origin.float().add_(noise)
         return origin, reduced.float()
 

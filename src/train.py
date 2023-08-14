@@ -108,7 +108,7 @@ class SRNetTrainer:
                     logger.info(f"Validate batch {batch_idx} loss: {last_loss}")
                     tb_x = epoch * len(self.test_dataloader) + batch_idx + 1
                     self.summary_writer.add_scalar("Loss/validate", last_loss, tb_x)
-                    self.summary_writer.add_images("Image/Origin", y, tb_x)
+                    self.summary_writer.add_images("Image/Target", y, tb_x)
                     self.summary_writer.add_images("Image/Inference", pred, tb_x)
                     test_loss = 0.
         return last_loss
