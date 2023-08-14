@@ -62,7 +62,7 @@
   - [x] _rand_color_distort 实现
   - [x] 添加高斯噪声
 - [x] DataLoader 数据加载器测试
-- [ ] SRNetTrainer 实现
+- [x] SRNetTrainer 实现
   - [ ] 记录收敛过程用于绘图
   - [x] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
