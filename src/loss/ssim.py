@@ -46,7 +46,7 @@ class SSIMFunc:
 
         if self._window is None:
             self._window = Window.create(self.window_size, channel)
-        self._window.to(image1.device)
+        self._window = self._window.to(image1.device)
         mu1 = F.conv2d(image1, self._window, padding=self.window_size // 2, groups=channel)
         mu2 = F.conv2d(image2, self._window, padding=self.window_size // 2, groups=channel)
 
@@ -115,4 +115,3 @@ if __name__ == '__main__':
                 img_pil = to_pil(image.squeeze(0))
                 img_pil.show()
                 last_ssim = ssim_value
-
