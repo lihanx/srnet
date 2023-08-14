@@ -38,6 +38,7 @@ class RandAugmentationDataSet(Dataset):
         self.limit = limit
         self.output_size = output_size
         self._current = 1
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         # augmentation prob
         self.hflip_p = hflip_p
         self.vflip_p = vflip_p
@@ -182,6 +183,7 @@ class RandAugmentationDataSet(Dataset):
         with Image.open(origin_file) as origin_pil, \
                 Image.open(reduced_file) as reduced_pil:
             origin, reduced = self.to_tensor(origin_pil, reduced_pil)
+            origin, reduced = origin.to(self.device), reduced.to(self.device)
             origin, reduced = self.normalize(origin, reduced)
             origin, reduced = self.rand_transform(origin, reduced)
             return origin, reduced
