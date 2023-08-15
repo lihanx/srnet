@@ -67,5 +67,8 @@
   - [x] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
 - [ ] SRNetTransformer 处理图片
-  - [ ] 中间状态的 feature map 保存，用于论文图示
+- [ ] 命令行
+  - [ ] `train --checkpoint --stop-at`
+  - [ ] `inference image`
+    - [ ] 中间状态的 feature map 保存，用于论文图示
 - [ ] SSIM/PSNR 指标

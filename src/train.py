@@ -122,7 +122,7 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = 0.05
-        best_ssim = 0.
+        best_loss = 0.
         for epoch in range(self.last_epoch, self.epochs):
             logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
             tloss = self._train(epoch)
@@ -133,8 +133,9 @@ class SRNetTrainer:
                 epoch+1
             )
             self.scheduler.step()
-            if tloss < 0.3 and vloss < 0.3:
+            if vloss < best_loss:
                 self.save_checkpoints(epoch, vloss)
+                best_loss = vloss
             if tloss <= limit and vloss <= limit:
                 best_ssim = 1 - vloss
                 logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
