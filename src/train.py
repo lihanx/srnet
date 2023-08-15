@@ -73,7 +73,9 @@ class SRNetTrainer:
         self.last_epoch = ckpt["epoch"]
         self.loss_fn.load_state_dict(ckpt["loss"])
         d = checkpoint.split("_")[1]
+        d = d[:8] + "_" + d[8:]
         self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{d}"))
+        logger.info(f"Checkpoint loaded: {checkpoint}")
         return None
 
     def _train(self, epoch):
