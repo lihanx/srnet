@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class SRNetTrainer:
 
-    def __init__(self):
+    def __init__(self, checkpoint=None):
         self.epochs = 10000
         self.learning_rate = 1e-4
         self.batch_size = 8
@@ -47,7 +47,11 @@ class SRNetTrainer:
         self.lr_epoch_per_decay = 100
         self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
         self._training_date = datetime.datetime.now()
-        self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d_%H%M%S}"))
+        self.last_epoch = 0
+        if checkpoint is not None:
+            self.load_checkpoints(checkpoint)
+        else:
+            self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d_%H%M%S}"))
 
     def save_checkpoints(self, epoch, loss_val) -> None:
         checkpoint = {
@@ -57,20 +61,20 @@ class SRNetTrainer:
             "epoch": epoch,
             "loss": self.loss_fn.state_dict(),
         }
-        filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.2f}"
+        filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.2f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
 
-    def load_checkpoints(self):
-        checkpoint_list = os.listdir(self.checkpoint_path)
-        if not checkpoint_list:
-            return None
-        created = 0
-        last_checkpoint = None
-        for filename in checkpoint_list:
-            filepath = os.path.join(self.checkpoint_path, filename)
-            if os.stat(filepath).st_mtime > created:
-                last_checkpoint = filepath
-        return torch.load(last_checkpoint)
+    def load_checkpoints(self, checkpoint):
+        checkpoint_path = os.path.join(self.checkpoint_path, checkpoint)
+        ckpt = torch.load(checkpoint_path)
+        self.net.load_state_dict(ckpt["model_state_dict"])
+        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        self.scheduler.load_state_dict(ckpt["schedular_state_dict"])
+        self.last_epoch = ckpt["epoch"]
+        self.loss_fn.load_state_dict(ckpt["loss"])
+        d = checkpoint.split("_")[1]
+        self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{d}"))
+        return None
 
     def _train(self, epoch):
         self.net.train()
@@ -117,7 +121,7 @@ class SRNetTrainer:
         logger.info("Train start.")
         limit = 0.05
         best_ssim = 0.
-        for epoch in range(self.epochs):
+        for epoch in range(self.last_epoch, self.epochs):
             logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
@@ -139,5 +143,5 @@ class SRNetTrainer:
 
 
 if __name__ == '__main__':
-    trainer = SRNetTrainer()
+    trainer = SRNetTrainer(checkpoint="checkpoint_20230815062659_epoch20_loss0.21")
     trainer.train()
