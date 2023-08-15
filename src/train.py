@@ -51,7 +51,7 @@ class SRNetTrainer:
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
-            self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d_%H%M%S}"))
+            self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d%H%M%S}"))
 
     def save_checkpoints(self, epoch, loss_val) -> None:
         checkpoint = {
@@ -73,7 +73,6 @@ class SRNetTrainer:
         self.last_epoch = ckpt["epoch"]
         self.loss_fn.load_state_dict(ckpt["loss"])
         d = checkpoint.split("_")[1]
-        d = d[:8] + "_" + d[8:]
         self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{d}"))
         logger.info(f"Checkpoint loaded: {checkpoint}")
         return None
@@ -140,7 +139,7 @@ class SRNetTrainer:
                 best_ssim = 1 - vloss
                 logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_ssim}_.pth"))
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
         logger.info("Model saved.")
         logger.info("Done.")
 

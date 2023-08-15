@@ -29,7 +29,7 @@ class TransposeDecoder(nn.Module):
         self.concat_4 = self. _make_combine(64*2, 64)
 
         self.head = nn.Sequential(
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=True),
+            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=False),
             self._norm_layer(64),
             nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
             self._norm_layer(3)
@@ -69,22 +69,29 @@ class TransposeDecoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x: Tensor, f1: Tensor, f2: Tensor, f3: Tensor):
+    def forward(self, x: Tensor, f1: Tensor, f2: Tensor, f3: Tensor, f4: Tensor):
         out = self.up_res1(x)
-        out = self.concat_1(torch.concat([out, f3], dim=1))
+        print("Decoder:", out.shape)
+        out = self.concat_1(torch.concat([out, f4], dim=1))
 
         out = self.up_res2(out)
-        out = self.concat_2(torch.concat([out, f2], dim=1))
+        print("Decoder:", out.shape)
+        out = self.concat_2(torch.concat([out, f3], dim=1))
 
         out = self.up_res3(out)
-        out = self.concat_3(torch.concat([out, f1], dim=1))
+        print("Decoder:", out.shape)
+        out = self.concat_3(torch.concat([out, f2], dim=1))
 
         out = self.up_res4(out)
-
+        print("Decoder:", out.shape)
+        out = self.concat_4(torch.concat([out, f1], dim=1))
         out = self.head(out)
         return out
 
 if __name__ == '__main__':
     decoder = TransposeDecoder()
     x = torch.rand(size=(1, 2048, 8, 8))
-    print(decoder(x).shape)
+    f3 = torch.rand(size=(1, 1024, 16, 16))
+    f2 = torch.rand(size=(1, 512, 32, 32))
+    f1 = torch.rand(size=(1, 64, 64, 64))
+    print(decoder(x, f1, f2, f3).shape)
