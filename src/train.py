@@ -3,7 +3,11 @@
 import datetime
 import os.path
 import logging
+import sys
+from typing import Union
+
 logging.basicConfig(level=logging.INFO)
+from argparse import ArgumentParser
 
 import torch
 from torch.utils.data import DataLoader
@@ -22,11 +26,16 @@ logger = logging.getLogger(__name__)
 
 class SRNetTrainer:
 
-    def __init__(self, checkpoint=None):
-        self.epochs = 10000
+    def __init__(self,
+                 epoch: int = 10000,
+                 batch_size: int = 16,
+                 earlystop_at: float = 0.3,
+                 checkpoint: Union[None, str] = None):
+        self.epochs = epoch
         self.learning_rate = 1e-4
-        self.batch_size = 8
+        self.batch_size = batch_size
         self.data_count = 1600
+        self.earlystop_at = earlystop_at
         cwd = os.path.abspath(os.path.dirname(__file__))
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
         _check_dir(self.checkpoint_path)
@@ -51,7 +60,7 @@ class SRNetTrainer:
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
-            self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d_%H%M%S}"))
+            self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d%H%M%S}"))
 
     def save_checkpoints(self, epoch, loss_val) -> None:
         checkpoint = {
@@ -59,7 +68,7 @@ class SRNetTrainer:
             "optimizer_state_dict": self.optimizer.state_dict(),
             "schedular_state_dict": self.scheduler.state_dict(),
             "epoch": epoch,
-            "loss": self.loss_fn.state_dict(),
+            "loss_state_dict": self.loss_fn.state_dict(),
         }
         filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.2f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
@@ -71,9 +80,8 @@ class SRNetTrainer:
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         self.scheduler.load_state_dict(ckpt["schedular_state_dict"])
         self.last_epoch = ckpt["epoch"]
-        self.loss_fn.load_state_dict(ckpt["loss"])
+        self.loss_fn.load_state_dict(ckpt["loss_state_dict"])
         d = checkpoint.split("_")[1]
-        d = d[:8] + "_" + d[8:]
         self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{d}"))
         logger.info(f"Checkpoint loaded: {checkpoint}")
         return None
@@ -122,7 +130,7 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = 0.05
-        best_loss = 0.
+        best_loss = self.earlystop_at
         for epoch in range(self.last_epoch, self.epochs):
             logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
             tloss = self._train(epoch)
@@ -140,11 +148,24 @@ class SRNetTrainer:
                 best_ssim = 1 - vloss
                 logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_ssim}_.pth"))
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}_.pth"))
         logger.info("Model saved.")
         logger.info("Done.")
 
 
+def parse_train_args(args):
+    parser = ArgumentParser()
+    parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
+    parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
+    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.3)
+    parser.add_argument("--checkpoint", action="store_const", help="指定保存的断点名称，继续进行训练", default=None)
+    return parser.parse_args(args)
+
+
 if __name__ == '__main__':
-    trainer = SRNetTrainer(checkpoint="checkpoint_20230815062659_epoch20_loss0.21")
+    args = parse_train_args(sys.argv[1:])
+    trainer = SRNetTrainer(epoch=args.epoch,
+                           batch_size=args.batch_size,
+                           earlystop_at=args.earlystop_at,
+                           checkpoint=None)
     trainer.train()
