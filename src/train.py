@@ -3,10 +3,9 @@
 import datetime
 import os.path
 import logging
+logging.basicConfig(level=logging.INFO)
 import sys
 from typing import Union
-
-logging.basicConfig(level=logging.INFO)
 from argparse import ArgumentParser
 
 import torch
@@ -70,8 +69,9 @@ class SRNetTrainer:
             "epoch": epoch,
             "loss_state_dict": self.loss_fn.state_dict(),
         }
-        filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.2f}.ckpt"
+        filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.4f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
+        logger.info(f"Checkpoint saved: {filename}")
 
     def load_checkpoints(self, checkpoint):
         checkpoint_path = os.path.join(self.checkpoint_path, checkpoint)
@@ -131,23 +131,26 @@ class SRNetTrainer:
         logger.info("Train start.")
         limit = 0.05
         best_loss = self.earlystop_at
-        for epoch in range(self.last_epoch, self.epochs):
-            logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
+        for epoch in range(self.last_epoch+1, self.epochs+1):
+            logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss} vloss-{vloss}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},
-                epoch+1
+                epoch
             )
             self.scheduler.step()
             if vloss < best_loss:
                 self.save_checkpoints(epoch, vloss)
                 best_loss = vloss
+            elif epoch % 10 == 0:
+                self.save_checkpoints(epoch, vloss)
             if tloss <= limit and vloss <= limit:
                 logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}_.pth"))
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
         logger.info("Model saved.")
         logger.info("Done.")
 
