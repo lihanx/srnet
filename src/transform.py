@@ -50,7 +50,6 @@ class SRNetTransformer:
         pl, pt, pr, pb = 0, 0, 0, 0
         pad_w = 0 if w % self.inplanes == 0 else self.inplanes - (w % self.inplanes) # w padding
         pad_h = 0 if h % self.inplanes == 0 else self.inplanes - (h % self.inplanes) # h padding
-        print(pad_w, pad_h)
         if pad_w:
             pl = pad_w // 2  # left
             pr = pad_w - pl  # right
@@ -58,7 +57,6 @@ class SRNetTransformer:
             pt = pad_h // 2  # top
             pb = pad_h - pt  # bottom
         if pl or pt or pr or pb:
-            print(pl, pt, pr, pb)
             img = F.pad(img, [pl, pt, pr, pb])  # left, top, right, bottom
         return img, pl, pt, pr, pb
 
@@ -79,7 +77,6 @@ class SRNetTransformer:
             padded, pl, pt, pr, pb = self.pad_image(img_tensor)
             # to same device
             new_img_tensor = torch.zeros_like(padded).to("cpu")
-            print(new_img_tensor)
             # crop
             for cropped, pos_x, pos_y in self.generate_cropped_input(padded):
                 # inference
