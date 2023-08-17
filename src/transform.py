@@ -89,7 +89,8 @@ class SRNetTransformer:
                 logger.info(f"Row {pos_y} transformed.")
                 # copy 到新 tensor 的对应位置
                 # concat
-                for pos_x, p in enumerate(transformed):
+                for idx, p in enumerate(transformed):
+                    pos_x = idx * self.inplanes
                     new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
             # remove padding
             new_img_tensor = F.crop(new_img_tensor, pt, pl, img.height, img.width)
