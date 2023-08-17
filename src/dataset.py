@@ -62,7 +62,7 @@ class RandAugmentationDataSet(Dataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.01,
+            "std": 0.1,
         }
 
     @property
