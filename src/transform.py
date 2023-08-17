@@ -63,10 +63,13 @@ class SRNetTransformer:
     def generate_cropped_input(self, img_tensor: Tensor):
         _, _, w, h = img_tensor.shape
         for y in range(h//self.inplanes):
+            batch = []
+            pos_y = y * self.inplanes
             for x in range(w//self.inplanes):
-                pos_x, pos_y = x * self.inplanes, y * self.inplanes
+                pos_x = x * self.inplanes
                 cropped = F.crop(img_tensor, pos_x, pos_y, self.inplanes, self.inplanes)
-                yield cropped, pos_x, pos_y
+                batch.append(cropped)
+            yield torch.concat(batch, dim=0), pos_y
 
     def transform(self, image_path, output_path):
         with Image.open(image_path) as img:
@@ -76,16 +79,17 @@ class SRNetTransformer:
             # padding
             padded, pl, pt, pr, pb = self.pad_image(img_tensor)
             # to same device
-            new_img_tensor = torch.zeros_like(padded)
+            new_img_tensor = torch.zeros(size=(3, img.height, img.width))
             # crop
-            for cropped, pos_x, pos_y in self.generate_cropped_input(padded):
+            for batch, pos_y in self.generate_cropped_input(padded):
                 # inference
-                cropped = cropped.to(self.device)
-                transformed = self.net(cropped)
-                logger.info(f"{pos_x}, {pos_y} transformed.")
+                batch = batch.to(self.device)
+                transformed = self.net(batch)
+                logger.info(f"Row {pos_y} transformed.")
                 # copy 到新 tensor 的对应位置
                 # concat
-                new_img_tensor[0, 0:3, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = transformed[0, :, :, :]
+                for pos_x, p in enumerate(transformed):
+                    new_img_tensor[0, 0:3, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[0, :, :, :]
             # remove padding
             new_img_tensor = F.crop(new_img_tensor.squeeze(0), pt, pl, img.height, img.width)
             new_img = F.to_pil_image(new_img_tensor, mode="RGB")
