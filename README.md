@@ -63,14 +63,14 @@
   - [x] 添加高斯噪声
 - [x] DataLoader 数据加载器测试
 - [x] SRNetTrainer 实现
-  - [ ] 记录收敛过程用于绘图
+  - [x] 记录收敛过程用于绘图(使用 tensorboard summarywriter)
   - [x] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
 - [ ] SRNetTransformer 处理图片
-- [ ] 命令行
-  - [ ] `train --checkpoint --stop-at`
-  - [ ] `inference image`
-    - [ ] 中间状态的 feature map 保存，用于论文图示
+- [x] 命令行
+  - [x] `python train.py --epoch 10000 --batch_size 16 --earlystop_at 0.3`
+  - [x] `python transform.py --checkpoint filename`
+- [ ] 中间状态的 feature map 保存，用于论文图示
 - [ ] SSIM/PSNR 指标
 
 
