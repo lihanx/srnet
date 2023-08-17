@@ -57,12 +57,12 @@ class RandAugmentationDataSet(Dataset):
             "brightness": None,
             "contrast": None,
             "saturation": None,
-            "hue": [-0.5, 0.5]
+            "hue": [-0.3, 0.3]
         }
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.07,
+            "std": 0.03,
         }
 
     @property
@@ -119,13 +119,16 @@ class RandAugmentationDataSet(Dataset):
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
-        if torch.rand(1) < 0.5:
+        if torch.rand(1) < 1:
             g_origin: Image = F.to_pil_image(origin, mode="RGB")
             g_origin = g_origin.convert("L")
             g_tensor = F.to_tensor(g_origin)
-            mask = (g_tensor < 0.6).float()
-            noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
-            noise *= mask
+            mask = (g_tensor < 0.5).int() * (g_tensor > 0.2).int()
+            _, h, w = origin.shape
+            _noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=(1, h, w))
+            _noise *= mask
+            noise = torch.zeros_like(origin)
+            noise[random.randrange(3),:,:] = _noise
             noise = noise.to(origin.device)
             origin.add_(noise)
         return origin, reduced
@@ -199,12 +202,13 @@ if __name__ == '__main__':
     dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
     from torchvision.transforms import functional as F
     # for origin, reduced in dataset:
-    origin, reduced = dataset[0]
-    print(origin.shape, reduced.shape)
-    origin = F.to_pil_image(origin, mode="RGB")
-    origin.show()
-    reduced = F.to_pil_image(reduced, mode="RGB")
-    reduced.show()
+    for i in range(20):
+        origin, reduced = dataset[i]
+        print(origin.shape, reduced.shape)
+        origin = F.to_pil_image(origin, mode="RGB")
+        origin.show()
+        # reduced = F.to_pil_image(reduced, mode="RGB")
+        # reduced.show()
 
     # from torch.utils.data import DataLoader
     #
