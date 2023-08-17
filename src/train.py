@@ -159,8 +159,8 @@ def parse_train_args(args):
     parser = ArgumentParser()
     parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
     parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
-    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.3)
-    parser.add_argument("--checkpoint", action="store_const", help="指定保存的断点名称，继续进行训练", default=None)
+    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.05)
+    parser.add_argument("--checkpoint", help="指定保存的断点名称，继续进行训练", default=None)
     return parser.parse_args(args)
 
 
@@ -169,5 +169,5 @@ if __name__ == '__main__':
     trainer = SRNetTrainer(epoch=args.epoch,
                            batch_size=args.batch_size,
                            earlystop_at=args.earlystop_at,
-                           checkpoint=None)
+                           checkpoint=args.checkpoint)
     trainer.train()

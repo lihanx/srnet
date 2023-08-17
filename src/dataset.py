@@ -75,9 +75,6 @@ class RandAugmentationDataSet(Dataset):
             raise ValueError(f"Empty DataSet {self.origin_path}")
         return self._image_list
 
-    def normalize(self, origin: Tensor, reduced: Tensor):
-        return origin.float().div_(255.0), reduced.float().div_(255.0)
-
     def _rand_crop(self, origin: Tensor, reduced: Tensor):
         """随机裁切"""
         options = RandomCrop.get_params(origin, self.output_size)
@@ -122,10 +119,11 @@ class RandAugmentationDataSet(Dataset):
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
-        noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
-        noise = noise.to(origin.device)
-        origin.float().add_(noise)
-        return origin, reduced.float()
+        if torch.rand(1) < 0.5:
+            noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
+            noise = noise.to(origin.device)
+            origin.float().add_(noise)
+        return origin, reduced
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
         """随机色差"""
@@ -158,7 +156,7 @@ class RandAugmentationDataSet(Dataset):
 
     def to_tensor(self, origin: Image, reduced: Image):
         """PIL Image 转换为 Tensor"""
-        return F.pil_to_tensor(origin), F.pil_to_tensor(reduced)
+        return F.to_tensor(origin), F.to_tensor(reduced)
 
     def rand_transform(self, origin: Tensor, reduced: Tensor):
         # 裁切 (256, 256)
@@ -185,7 +183,6 @@ class RandAugmentationDataSet(Dataset):
                 Image.open(reduced_file) as reduced_pil:
             origin, reduced = self.to_tensor(origin_pil, reduced_pil)
             origin, reduced = origin.to(self.device), reduced.to(self.device)
-            origin, reduced = self.normalize(origin, reduced)
             origin, reduced = self.rand_transform(origin, reduced)
             return origin, reduced
 
