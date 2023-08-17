@@ -23,34 +23,62 @@ class SRNetTransformer:
         weight_path = os.path.join(cwd, f"weights/{weight_name}")
         self.net.load_state_dict(torch.load(weight_path))
         self.net.eval()
+        self.net = self.net.to(self.device)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(log_level)
 
-    def pad_image(self, img: Tensor) -> Tensor:
-        w, h = img.shape
+    def pad_image(self, img: Tensor):
+        """padding 以保证图片可以被 256,256 裁切完整覆盖"""
+        _, _, w, h = img.shape
+        pl, pt, pr, pb = 0, 0, 0, 0
         if w >= self.inplanes:
-            wp = w % self.inplanes
+            pr = w % self.inplanes
         else:
-            wp = self.inplanes - w
+            pr = self.inplanes - w
         if h >= self.inplanes:
-            hp = h % self.inplanes
+            pb = h % self.inplanes
         else:
-            hp = self.inplanes - h
-        img = F.pad(img, [0, 0, wp, hp])  # left, top, right, bottom
-        return img
+            pb = self.inplanes - h
+        if pl or pt or pr or pb:
+            img = F.pad(img, [pl, pt, pr, pb])  # left, top, right, bottom
+        return img, pl, pt, pr, pb
+
+    def normalize(self, img_tensor: Tensor):
+        """normalize inplace"""
+        return img_tensor.float().div(255.0)
+
+    def generate_cropped_input(self, img_tensor: Tensor):
+        nw, nh = 0, 0
+        _, _, w, h = img_tensor.shape
+        lx, ly = 0, 0
+        while lx < w and ly < h:
+            lx, ly = nw * self.inplanes, nh * self.inplanes
+            cropped = F.crop(img_tensor, lx, ly, self.inplanes, self.inplanes)
+            yield cropped, lx, ly
 
     def transform(self, image_path, output_path):
         with Image.open(image_path) as img:
             img = img.convert(mode="RGB")
             img_tensor = F.to_tensor(img)
-            padded = self.pad_image(img_tensor)
+            self.normalize(img_tensor)
+            # padding
+            padded, pl, pt, pr, pb = self.pad_image(img_tensor)
+            # to same device
+            padded = padded.to(self.device)
+            new_img_tensor = torch.zeros_like(padded).to(self.device)
             # crop
-            # normalize
-            # inference
-            # concat
-            # unpadding
+            for cropped, lx, ly in self.generate_cropped_input(img_tensor):
+                # inference
+                transformed = self.net(cropped)
+                # copy 到新 tensor 的对应位置
+                # concat
+                new_img_tensor[0, 0:3, lx:lx+self.inplanes, ly:ly+self.inplanes] = transformed[0, 0:3, lx:lx+self.inplanes, ly:ly+self.inplanes]
+            # remove padding
+            new_img_tensor = F.crop(new_img_tensor, 0+pt, 0+pl, img.height, img.width)
+            new_img = F.to_pil_image(new_img_tensor, mode="RGB")
             # save
-
+            new_img.save(output_path)
+        return None
 
 
 def parse_inference_args(args):
