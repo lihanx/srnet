@@ -95,10 +95,10 @@ class SRNetTransformer:
 
 def parse_inference_args(args):
     parser = ArgumentParser()
-    parser.add_argument("--image", action="store_const", required=True)
-    parser.add_argument("--output", action="store_const", required=False, default="")
-    parser.add_argument("--weight", action="store_const", required=False, default=None)
-    parser.add_argument("--checkpoint", action="store_const", default=None)
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--output", required=False, default="")
+    parser.add_argument("--weight", required=False, default=None)
+    parser.add_argument("--checkpoint", default=None)
     return parser.parse_args(args)
 
 
