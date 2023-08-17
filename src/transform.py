@@ -22,9 +22,10 @@ class SRNetTransformer:
 
     def __init__(self,
                  weight_name: Union[str, None],
-                 checkpoint_name: Union[str, None] = None):
+                 checkpoint_name: Union[str, None] = None,
+                 device_name: Union[str, None] = "cuda"):
         self.inplanes = 256
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device(device_name)
         self.net = SRNet()
         cwd = os.getcwd()
         if weight_name is not None:
@@ -104,6 +105,7 @@ def parse_inference_args(args):
     parser.add_argument("--output", required=False, default="")
     parser.add_argument("--weight", required=False, default=None)
     parser.add_argument("--checkpoint", default=None)
+    parser.add_argument("--device", default="cuda")
     return parser.parse_args(args)
 
 
@@ -113,5 +115,5 @@ if __name__ == '__main__':
     if not output:
         image_path, ext = os.path.splitext(args.image)
         output = f"{image_path}_reduced{ext}"
-    transformer = SRNetTransformer(args.weight, args.checkpoint)
+    transformer = SRNetTransformer(args.weight, args.checkpoint, args.device)
     transformer.transform(image_path=args.image, output_path=output)
