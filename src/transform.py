@@ -76,7 +76,7 @@ class SRNetTransformer:
             # padding
             padded, pl, pt, pr, pb = self.pad_image(img_tensor)
             # to same device
-            new_img_tensor = torch.zeros_like(padded).to("cpu")
+            new_img_tensor = torch.zeros_like(padded)
             # crop
             for cropped, pos_x, pos_y in self.generate_cropped_input(padded):
                 # inference
