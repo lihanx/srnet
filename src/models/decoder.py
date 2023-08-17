@@ -31,7 +31,6 @@ class TransposeDecoder(nn.Module):
         self.head = nn.Sequential(
             nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=False),
             self._norm_layer(64),
-            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
             self._norm_layer(3),
             nn.ReLU(inplace=True)
