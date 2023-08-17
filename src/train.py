@@ -129,8 +129,8 @@ class SRNetTrainer:
 
     def train(self):
         logger.info("Train start.")
-        limit = 0.05
-        best_loss = self.earlystop_at
+        limit = self.earlystop_at
+        best_loss = 0.3
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
