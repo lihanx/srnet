@@ -78,8 +78,9 @@ class SRNetTransformer:
             img_tensor = F.to_tensor(img).unsqueeze(0)
             # padding
             padded, pl, pt, pr, pb = self.pad_image(img_tensor)
+            _, c, h, w = padded.shape
             # to same device
-            new_img_tensor = torch.zeros(size=(3, img.height, img.width))
+            new_img_tensor = torch.zeros(size=(3, h, w))
             # crop
             for batch, pos_y in self.generate_cropped_input(padded):
                 # inference
