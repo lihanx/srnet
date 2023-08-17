@@ -44,10 +44,12 @@ class SRNetTransformer:
 
     def pad_image(self, img: Tensor):
         """padding 以保证图片可以被 256,256 裁切完整覆盖"""
-        _, _, w, h = img.shape
+        _, _, h, w = img.shape
+        logger.info(f"Image Size: {w},{h}")
         pl, pt, pr, pb = 0, 0, 0, 0
         pad_w = 0 if w % self.inplanes == 0 else self.inplanes - (w % self.inplanes) # w padding
         pad_h = 0 if h % self.inplanes == 0 else self.inplanes - (h % self.inplanes) # h padding
+        print(pad_w, pad_h)
         if pad_w:
             pl = pad_w // 2  # left
             pr = pad_w - pl  # right
@@ -55,13 +57,14 @@ class SRNetTransformer:
             pt = pad_h // 2  # top
             pb = pad_h - pt  # bottom
         if pl or pt or pr or pb:
+            print(pl, pt, pr, pb)
             img = F.pad(img, [pl, pt, pr, pb])  # left, top, right, bottom
         return img, pl, pt, pr, pb
 
     def generate_cropped_input(self, img_tensor: Tensor):
         _, _, w, h = img_tensor.shape
-        for y in range(h//self.inplanes+1):
-            for x in range(w//self.inplanes+1):
+        for y in range(h//self.inplanes):
+            for x in range(w//self.inplanes):
                 pos_x, pos_y = x * self.inplanes, y * self.inplanes
                 cropped = F.crop(img_tensor, pos_x, pos_y, self.inplanes, self.inplanes)
                 yield cropped, pos_x, pos_y
@@ -74,9 +77,10 @@ class SRNetTransformer:
             # padding
             padded, pl, pt, pr, pb = self.pad_image(img_tensor)
             # to same device
-            new_img_tensor = torch.zeros_like(padded)
+            new_img_tensor = torch.zeros_like(padded).to("cpu")
+            print(new_img_tensor)
             # crop
-            for cropped, pos_x, pos_y in self.generate_cropped_input(img_tensor):
+            for cropped, pos_x, pos_y in self.generate_cropped_input(padded):
                 # inference
                 cropped = cropped.to(self.device)
                 transformed = self.net(cropped)
@@ -87,11 +91,10 @@ class SRNetTransformer:
             # remove padding
             new_img_tensor = F.crop(new_img_tensor.squeeze(0), pt, pl, img.height, img.width)
             new_img = F.to_pil_image(new_img_tensor, mode="RGB")
-            new_img.show()
             # save
             new_img.save(output_path)
             logger.info(f"Save image: {output_path}.")
-            logger.info("Dono.")
+            logger.info("Done.")
         return None
 
 
