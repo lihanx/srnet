@@ -89,9 +89,9 @@ class SRNetTransformer:
                 # copy 到新 tensor 的对应位置
                 # concat
                 for pos_x, p in enumerate(transformed):
-                    new_img_tensor[0, 0:3, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[0, :, :, :]
+                    new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
             # remove padding
-            new_img_tensor = F.crop(new_img_tensor.squeeze(0), pt, pl, img.height, img.width)
+            new_img_tensor = F.crop(new_img_tensor, pt, pl, img.height, img.width)
             new_img = F.to_pil_image(new_img_tensor, mode="RGB")
             # save
             new_img.save(output_path)
