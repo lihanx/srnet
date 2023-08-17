@@ -62,7 +62,7 @@ class RandAugmentationDataSet(Dataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.1,
+            "std": 0.07,
         }
 
     @property
@@ -120,9 +120,14 @@ class RandAugmentationDataSet(Dataset):
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
         if torch.rand(1) < 0.5:
+            g_origin: Image = F.to_pil_image(origin, mode="RGB")
+            g_origin = g_origin.convert("L")
+            g_tensor = F.to_tensor(g_origin)
+            mask = (g_tensor < 0.6).float()
             noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=origin.shape)
+            noise *= mask
             noise = noise.to(origin.device)
-            origin.float().add_(noise)
+            origin.add_(noise)
         return origin, reduced
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
@@ -192,14 +197,13 @@ if __name__ == '__main__':
     image_dir = "images"
     dataset_dir = os.path.join(cwd, image_dir)
     dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
-    from torchvision.transforms import ToPILImage
-    to_pil = ToPILImage(mode="RGB")
+    from torchvision.transforms import functional as F
     # for origin, reduced in dataset:
     origin, reduced = dataset[0]
     print(origin.shape, reduced.shape)
-    origin = to_pil(origin)
+    origin = F.to_pil_image(origin, mode="RGB")
     origin.show()
-    reduced = to_pil(reduced)
+    reduced = F.to_pil_image(reduced, mode="RGB")
     reduced.show()
 
     # from torch.utils.data import DataLoader
