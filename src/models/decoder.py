@@ -29,17 +29,19 @@ class TransposeDecoder(nn.Module):
         self.concat_4 = self. _make_combine(64*2, 64)
 
         self.head = nn.Sequential(
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=True),
+            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=False),
             self._norm_layer(64),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
-            self._norm_layer(3)
+            self._norm_layer(3),
+            nn.ReLU(inplace=True)
         )
 
     def _make_combine(self, inplanes, planes):
         return nn.Sequential(
-            nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, padding=0, bias=True),
             nn.BatchNorm2d(planes),
-            # nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True)
         )
 
     def _make_transpose(self, block, planes, blocks, stride=1):

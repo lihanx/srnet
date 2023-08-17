@@ -25,7 +25,7 @@ class SRNetTrainer:
     def __init__(self, checkpoint=None):
         self.epochs = 10000
         self.learning_rate = 1e-4
-        self.batch_size = 8
+        self.batch_size = 16
         self.data_count = 1600
         cwd = os.path.abspath(os.path.dirname(__file__))
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
@@ -122,7 +122,7 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = 0.05
-        best_loss = 0.
+        best_loss = 0.3
         for epoch in range(self.last_epoch, self.epochs):
             logger.info(f"Training Epoch {epoch+1}/{self.epochs}")
             tloss = self._train(epoch)
@@ -137,14 +137,13 @@ class SRNetTrainer:
                 self.save_checkpoints(epoch, vloss)
                 best_loss = vloss
             if tloss <= limit and vloss <= limit:
-                best_ssim = 1 - vloss
-                logger.info(f"SSIM >= {1-best_ssim}, Stop Training.")
+                logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_ssim}_.pth"))
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
         logger.info("Model saved.")
         logger.info("Done.")
 
 
 if __name__ == '__main__':
-    trainer = SRNetTrainer(checkpoint="checkpoint_20230815062659_epoch20_loss0.21")
+    trainer = SRNetTrainer()
     trainer.train()
