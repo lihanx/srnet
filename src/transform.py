@@ -33,11 +33,16 @@ class SRNetTransformer:
             self.net.load_state_dict(torch.load(weight_path))
         elif checkpoint_name is not None:
             ckpt_path = os.path.join(cwd, f"checkpoints/{checkpoint_name}")
-            ckpt = torch.load(ckpt_path)
-            self.net.load_state_dict(ckpt["model_state_dict"])
             weight_name = checkpoint_name.replace(".ckpt", "pth")
             weight_path = os.path.join(cwd, f"weights/{weight_name}")
-            _save_weight_from_checkpoint(ckpt, weight_path)
+            if os.path.exists(weight_path):
+                logger.info(f"Load weight: {weight_path}")
+                weight = torch.load(weight_path)
+            else:
+                ckpt = torch.load(ckpt_path)
+                weight = ckpt["model_state_dict"]
+                _save_weight_from_checkpoint(ckpt, weight_path)
+            self.net.load_state_dict(weight)
         else:
             raise ValueError("Required at least 1 argument: weight or checkpoint.")
         self.net.eval()
