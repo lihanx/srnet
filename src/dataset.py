@@ -11,7 +11,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, Resize
 
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,10 @@ class RandAugmentationDataSet(Dataset):
         self.noise_options = {
             "mean": 0,
             "std": 0.03,
+        }
+        # resize params
+        self.resize_options = {
+            "ratio": [0.5, 1.5],
         }
 
     @property
@@ -119,7 +123,7 @@ class RandAugmentationDataSet(Dataset):
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
-        if torch.rand(1) < 1:
+        if torch.rand(1) < 0.5:
             g_origin: Image = F.to_pil_image(origin, mode="RGB")
             g_origin = g_origin.convert("L")
             g_tensor = F.to_tensor(g_origin)
@@ -162,11 +166,23 @@ class RandAugmentationDataSet(Dataset):
             raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
         return origin_file, reduced_file
 
+    def _rand_resize(self, origin: Tensor, reduced: Tensor):
+        if torch.rand(1) < 0.5:
+            ratio = float(torch.empty(1).uniform_(self.resize_options["ratio"][0],  self.resize_options["ratio"][1]))
+            print("Resize ratio:", ratio)
+            _, h, w = origin.shape
+            nh, nw = int(h*ratio), int(w*ratio)
+            origin = F.resize(origin, size=[nh, nw], antialias=None)
+            reduced = F.resize(reduced, size=[nh, nw], antialias=None)
+        return origin, reduced
+
     def to_tensor(self, origin: Image, reduced: Image):
         """PIL Image 转换为 Tensor"""
         return F.to_tensor(origin), F.to_tensor(reduced)
 
     def rand_transform(self, origin: Tensor, reduced: Tensor):
+        # 缩放
+        # origin, reduced = self._rand_resize(origin, reduced)
         # 裁切 (256, 256)
         origin, reduced = self._rand_crop(origin, reduced)
         # 高斯噪声
@@ -179,7 +195,6 @@ class RandAugmentationDataSet(Dataset):
         origin, reduced = self._rand_rotate(origin, reduced)
         # 随机转色
         origin, reduced = self._rand_color_distort(origin, reduced)
-
         return origin, reduced
 
     def __len__(self):
