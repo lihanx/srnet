@@ -11,7 +11,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, Resize
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, RandomResizedCrop
 
 
 logger = logging.getLogger(__name__)
@@ -65,8 +65,9 @@ class RandAugmentationDataSet(Dataset):
             "std": 0.03,
         }
         # resize params
-        self.resize_options = {
-            "ratio": [0.5, 1.5],
+        self.resizecrop_options = {
+            "ratio": [3.0 / 4.0, 4.0 / 3.0],
+            "scale": [0.8, 1.2],
         }
 
     @property
@@ -166,14 +167,18 @@ class RandAugmentationDataSet(Dataset):
             raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
         return origin_file, reduced_file
 
-    def _rand_resize(self, origin: Tensor, reduced: Tensor):
+    def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
+        i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
-            ratio = float(torch.empty(1).uniform_(self.resize_options["ratio"][0],  self.resize_options["ratio"][1]))
-            print("Resize ratio:", ratio)
-            _, h, w = origin.shape
-            nh, nw = int(h*ratio), int(w*ratio)
-            origin = F.resize(origin, size=[nh, nw], antialias=None)
-            reduced = F.resize(reduced, size=[nh, nw], antialias=None)
+            ratio = torch.empty(1).uniform_(0.6, 1.4).item()
+            h = int(h * ratio)
+            w = int(w / ratio)
+            origin = F.crop(origin, i, j, h, w)
+            origin = F.resize(origin, list(self.output_size), antialias=None)
+            reduced = F.crop(reduced, i, j, h, w)
+            reduced = F.resize(reduced, list(self.output_size), antialias=None)
+        else:
+            origin, reduced = F.crop(origin, i, j, h, w), F.crop(reduced, i, j, h, w)
         return origin, reduced
 
     def to_tensor(self, origin: Image, reduced: Image):
@@ -181,10 +186,8 @@ class RandAugmentationDataSet(Dataset):
         return F.to_tensor(origin), F.to_tensor(reduced)
 
     def rand_transform(self, origin: Tensor, reduced: Tensor):
-        # 缩放
-        # origin, reduced = self._rand_resize(origin, reduced)
-        # 裁切 (256, 256)
-        origin, reduced = self._rand_crop(origin, reduced)
+        # 缩放裁切 (256, 256)
+        origin, reduced = self._rand_resizecrop(origin, reduced)
         # 高斯噪声
         origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
@@ -222,9 +225,9 @@ if __name__ == '__main__':
         print(origin.shape, reduced.shape)
         origin = F.to_pil_image(origin, mode="RGB")
         origin.show()
-        # reduced = F.to_pil_image(reduced, mode="RGB")
-        # reduced.show()
-
+        reduced = F.to_pil_image(reduced, mode="RGB")
+        reduced.show()
+        break
     # from torch.utils.data import DataLoader
     #
     # loader = DataLoader(dataset=dataset, batch_size=64)

@@ -45,8 +45,8 @@ class SRNetTransformer:
             self.net.load_state_dict(weight)
         else:
             raise ValueError("Required at least 1 argument: weight or checkpoint.")
-        self.net.eval()
         self.net = self.net.to(self.device)
+        self.net.eval()
 
     def pad_image(self, img: Tensor):
         """padding 以保证图片可以被 256,256 裁切完整覆盖"""
@@ -77,33 +77,34 @@ class SRNetTransformer:
             yield torch.concat(batch, dim=0), pos_y
 
     def transform(self, image_path, output_path):
-        with Image.open(image_path) as img:
-            logger.info(f"Open image: {image_path}.")
-            img = img.convert(mode="RGB")
-            img_tensor = F.to_tensor(img).unsqueeze(0)
-            # padding
-            padded, pl, pt, pr, pb = self.pad_image(img_tensor)
-            _, c, h, w = padded.shape
-            # to same device
-            new_img_tensor = torch.zeros(size=(3, h, w))
-            # crop
-            for batch, pos_y in self.generate_cropped_input(padded):
-                # inference
-                batch = batch.to(self.device)
-                transformed = self.net(batch)
-                logger.info(f"Row {pos_y} transformed.")
-                # copy 到新 tensor 的对应位置
-                # concat
-                for idx, p in enumerate(transformed):
-                    pos_x = idx * self.inplanes
-                    new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
-            # remove padding
-            new_img_tensor = F.crop(new_img_tensor, pt, pl, img.height, img.width)
-            new_img = F.to_pil_image(new_img_tensor, mode="RGB")
-            # save
-            new_img.save(output_path)
-            logger.info(f"Save image: {output_path}.")
-            logger.info("Done.")
+        with torch.no_grad():
+            with Image.open(image_path) as img:
+                logger.info(f"Open image: {image_path}.")
+                img = img.convert(mode="RGB")
+                img_tensor = F.to_tensor(img).unsqueeze(0)
+                # padding
+                padded, pl, pt, pr, pb = self.pad_image(img_tensor)
+                _, c, h, w = padded.shape
+                # to same device
+                new_img_tensor = torch.zeros(size=(c, h, w))
+                # crop
+                for batch, pos_y in self.generate_cropped_input(padded):
+                    # inference
+                    batch = batch.to(self.device)
+                    transformed = self.net(batch)
+                    logger.info(f"Row {pos_y} transformed.")
+                    # copy 到新 tensor 的对应位置
+                    # concat
+                    for idx, p in enumerate(transformed):
+                        pos_x = idx * self.inplanes
+                        new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
+                # remove padding
+                new_img_tensor = F.crop(new_img_tensor, pt, pl, img.height, img.width)
+                new_img = F.to_pil_image(new_img_tensor, mode="RGB")
+                # save
+                new_img.save(output_path)
+                logger.info(f"Save image: {output_path}.")
+                logger.info("Done.")
         return None
 
 

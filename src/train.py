@@ -52,7 +52,7 @@ class SRNetTrainer:
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8
-        self.lr_epoch_per_decay = 100
+        self.lr_epoch_per_decay = 20
         self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
