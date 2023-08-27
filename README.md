@@ -75,4 +75,4 @@
 
 
 第一版成功
-`checkpoint_20230815092730_epoch86_loss0.12.ckpt`
+`checkpoint_20230817225353_epoch465_loss0.0965pth`
