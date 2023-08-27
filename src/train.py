@@ -71,6 +71,8 @@ class SRNetTrainer:
         }
         filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.4f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
+        weight_file = filename.replace("ckpt", "pth")
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, weight_file))
         logger.info(f"Checkpoint saved: {filename}")
 
     def load_checkpoints(self, checkpoint):
@@ -132,7 +134,7 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
-        best_loss = 0.3
+        best_loss = 0.1
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)

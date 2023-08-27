@@ -57,7 +57,7 @@ class RandAugmentationDataSet(Dataset):
             "brightness": None,
             "contrast": None,
             "saturation": None,
-            "hue": [-0.3, 0.3]
+            "hue": [-0.5, 0.5]
         }
         # noise params
         self.noise_options = {
@@ -128,7 +128,8 @@ class RandAugmentationDataSet(Dataset):
             g_origin: Image = F.to_pil_image(origin, mode="RGB")
             g_origin = g_origin.convert("L")
             g_tensor = F.to_tensor(g_origin)
-            mask = (g_tensor < 0.5).int() * (g_tensor > 0.2).int()
+            max_val = torch.max(g_tensor)
+            mask = (g_tensor < 0.5 * max_val).int() * (g_tensor > 0.2 * max_val).int()
             _, h, w = origin.shape
             _noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=(1, h, w))
             _noise *= mask
