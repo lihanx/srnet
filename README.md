@@ -66,7 +66,7 @@
   - [x] 记录收敛过程用于绘图(使用 tensorboard summarywriter)
   - [x] 实现 SSIMLoss
 - [x] SRNet/ResNetEncoder/Decoder
-- [ ] SRNetTransformer 处理图片
+- [x] SRNetTransformer 处理图片
 - [x] 命令行
   - [x] `python train.py --epoch 10000 --batch_size 16 --earlystop_at 0.3`
   - [x] `python transform.py --checkpoint filename`
@@ -74,5 +74,5 @@
 - [ ] SSIM/PSNR 指标
 
 
-第一版成功
-`checkpoint_20230817225353_epoch465_loss0.0965pth`
+第一版
+`checkpoint_20230817225353_epoch465_loss0.0965pth` 星点中心颜色异常
