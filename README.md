@@ -75,4 +75,4 @@
 
 
 第一版
-`checkpoint_20230817225353_epoch465_loss0.0965pth` 星点中心颜色异常
+`checkpoint_20230817225353_epoch465_loss0.0965pth` 星点中心颜色异常 v1

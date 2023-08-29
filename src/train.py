@@ -134,12 +134,13 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
-        best_loss = 0.1
+        best_loss = 0.18
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
-            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss} vloss-{vloss}")
+            lr = self.scheduler.get_last_lr()
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr[0]:.6f}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},
