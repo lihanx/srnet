@@ -18,8 +18,8 @@
         # TransposeResBlock1 1024,16,16
         # TransposeResBlock2 512,32,32
         # TransposeResBlock3 256,64,64
+        # TransposeResBlock3 64,128,128
     # Head
-        # TransposeConv1 64,128,128
         # TransposeConv2 3,256,256
         # BN
 # Output 3,256,256

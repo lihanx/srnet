@@ -6,7 +6,7 @@ from collections import OrderedDict
 import torch
 from torch import nn, Tensor
 
-from .blocks import TransposeBasicBlock
+from .blocks import TransposeBottleneck
 
 
 class TransposeDecoder(nn.Module):
@@ -18,29 +18,26 @@ class TransposeDecoder(nn.Module):
         self.groups = 1
         self.contraction = 1
         self._norm_layer = nn.BatchNorm2d
-        self.up_res1 = self._make_transpose(TransposeBasicBlock, 1024, 2, stride=2)
-        self.up_res2 = self._make_transpose(TransposeBasicBlock, 512, 2, stride=2)
-        self.up_res3 = self._make_transpose(TransposeBasicBlock, 256, 2, stride=2)
-        self.up_res4 = self._make_transpose(TransposeBasicBlock, 64, 2, stride=1)
+        self.up_res1 = self._make_transpose(TransposeBottleneck, 1024, 2, stride=2)
+        self.up_res2 = self._make_transpose(TransposeBottleneck, 512, 2, stride=2)
+        self.up_res3 = self._make_transpose(TransposeBottleneck, 256, 2, stride=2)
+        self.up_res4 = self._make_transpose(TransposeBottleneck, 64, 2, stride=2)
 
         self.concat_1 = self. _make_combine(1024*2, 1024)
         self.concat_2 = self. _make_combine(512*2, 512)
         self.concat_3 = self. _make_combine(256*2, 256)
-        self.concat_4 = self. _make_combine(64*2, 64)
 
         self.head = nn.Sequential(
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=False),
-            self._norm_layer(64),
-            nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
+            nn.ConvTranspose2d(self.inplanes, 3, kernel_size=2, stride=2, bias=True),
             self._norm_layer(3),
             nn.ReLU(inplace=True)
         )
 
     def _make_combine(self, inplanes, planes):
         return nn.Sequential(
-            nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(planes),
-            # nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True)
         )
 
     def _make_transpose(self, block, planes, blocks, stride=1):

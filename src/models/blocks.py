@@ -12,7 +12,7 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 
-class TransposeBasicBlock(nn.Module):
+class TransposeBottleneck(nn.Module):
     expansion = 2
 
     def __init__(self, inplanes, planes, stride=1, upsample=None, **kwargs):
@@ -51,4 +51,5 @@ class TransposeBasicBlock(nn.Module):
 
         out += identity
         out = self.relu(out)
+        print("Decoder:", out.shape)
         return out
