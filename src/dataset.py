@@ -54,15 +54,15 @@ class RandAugmentationDataSet(Dataset):
         }
         # color params
         self.color_options = {
-            "brightness": [-0.2, 0.2],
-            "contrast": [-0.2, 0.2],
-            "saturation": [-0.2, 0.2],
+            "brightness": 0.2,
+            "contrast": 0.2,
+            "saturation": 0.2,
             "hue": [-0.5, 0.5]
         }
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.03,
+            "std": 0.02,
         }
         # resize params
         self.resizecrop_options = {
