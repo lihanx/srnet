@@ -9,9 +9,9 @@ from typing import Tuple, Sequence, List, Union
 from PIL import Image
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, RandomResizedCrop
+from torch.utils.data import Dataset
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class RandAugmentationDataSet(Dataset):
             "brightness": None,
             "contrast": None,
             "saturation": None,
-            "hue": [-0.3, 0.3]
+            "hue": [-0.5, 0.5]
         }
         # noise params
         self.noise_options = {
@@ -69,6 +69,9 @@ class RandAugmentationDataSet(Dataset):
             "ratio": [3.0 / 4.0, 4.0 / 3.0],
             "scale": [0.8, 1.2],
         }
+        self._origin, self._reduced = None, None
+        self.rand_open_images()
+        self._cnt = 0
 
     @property
     def image_list(self):
@@ -128,7 +131,8 @@ class RandAugmentationDataSet(Dataset):
             g_origin: Image = F.to_pil_image(origin, mode="RGB")
             g_origin = g_origin.convert("L")
             g_tensor = F.to_tensor(g_origin)
-            mask = (g_tensor < 0.5).int() * (g_tensor > 0.2).int()
+            max_val = torch.max(g_tensor)
+            mask = (g_tensor < 0.5 * max_val).int() * (g_tensor > 0.2 * max_val).int()
             _, h, w = origin.shape
             _noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=(1, h, w))
             _noise *= mask
@@ -189,7 +193,7 @@ class RandAugmentationDataSet(Dataset):
         # 缩放裁切 (256, 256)
         origin, reduced = self._rand_resizecrop(origin, reduced)
         # 高斯噪声
-        origin, reduced = self._rand_noise(origin, reduced)
+        # origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
         origin, reduced = self._rand_hflip(origin, reduced)
         # 随机垂直翻转
@@ -203,14 +207,20 @@ class RandAugmentationDataSet(Dataset):
     def __len__(self):
         return self.limit
 
-    def __getitem__(self, item):
+    def rand_open_images(self):
+        if self._origin is not None:
+            del self._origin
+        if self._reduced is not None:
+            del self._reduced
         origin_file, reduced_file = self._rand_image_file()
-        with Image.open(origin_file) as origin_pil, \
-                Image.open(reduced_file) as reduced_pil:
-            origin, reduced = self.to_tensor(origin_pil, reduced_pil)
-            origin, reduced = origin.to(self.device), reduced.to(self.device)
-            origin, reduced = self.rand_transform(origin, reduced)
-            return origin, reduced
+        with Image.open(origin_file) as origin, \
+                Image.open(reduced_file) as reduced:
+            origin, reduced = self.to_tensor(origin, reduced)
+            self._origin, self._reduced = origin.to(self.device), reduced.to(self.device)
+
+    def __getitem__(self, item):
+        origin, reduced = self.rand_transform(self._origin, self._reduced)
+        return origin, reduced
 
 
 if __name__ == '__main__':
