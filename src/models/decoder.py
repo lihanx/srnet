@@ -6,22 +6,25 @@ from collections import OrderedDict
 import torch
 from torch import nn, Tensor
 
-from .blocks import TransposeBasicBlock
+from .blocks import TransposeBottleneck
 
 
 class TransposeDecoder(nn.Module):
 
-    def __init__(self):
+    def __init__(
+            self,
+            block_cls=TransposeBottleneck
+    ):
         super().__init__()
         self.inplanes = 2048
         self.base_width = 2048
         self.groups = 1
         self.contraction = 1
         self._norm_layer = nn.BatchNorm2d
-        self.up_res1 = self._make_transpose(TransposeBasicBlock, 1024, 2, stride=2)
-        self.up_res2 = self._make_transpose(TransposeBasicBlock, 512, 2, stride=2)
-        self.up_res3 = self._make_transpose(TransposeBasicBlock, 256, 2, stride=2)
-        self.up_res4 = self._make_transpose(TransposeBasicBlock, 64, 2, stride=1)
+        self.up_res1 = self._make_transpose(block_cls, 1024, 2, stride=2)
+        self.up_res2 = self._make_transpose(block_cls, 512, 2, stride=2)
+        self.up_res3 = self._make_transpose(block_cls, 256, 2, stride=2)
+        self.up_res4 = self._make_transpose(block_cls, 64, 2, stride=1)
 
         self.concat_1 = self. _make_combine(1024*2, 1024)
         self.concat_2 = self. _make_combine(512*2, 512)
@@ -81,7 +84,6 @@ class TransposeDecoder(nn.Module):
         out = self.concat_3(torch.concat([out, f1], dim=1))
 
         out = self.up_res4(out)
-
         out = self.head(out)
         return out
 

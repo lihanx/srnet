@@ -54,9 +54,9 @@ class RandAugmentationDataSet(Dataset):
         }
         # color params
         self.color_options = {
-            "brightness": None,
-            "contrast": None,
-            "saturation": None,
+            "brightness": [-0.2, 0.2],
+            "contrast": [-0.2, 0.2],
+            "saturation": [-0.2, 0.2],
             "hue": [-0.5, 0.5]
         }
         # noise params
@@ -169,6 +169,7 @@ class RandAugmentationDataSet(Dataset):
         reduced_file = os.path.join(self.reduced_path, image_name)
         if not os.path.exists(reduced_file):
             raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
+        logger.info(f"Use {origin_file}")
         return origin_file, reduced_file
 
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
