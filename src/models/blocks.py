@@ -51,5 +51,4 @@ class TransposeBottleneck(nn.Module):
 
         out += identity
         out = self.relu(out)
-        print("Decoder:", out.shape)
         return out

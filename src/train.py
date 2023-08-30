@@ -47,8 +47,9 @@ class SRNetTrainer:
         self.test_dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
         self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        logger.info(f"use {self.device}")
         self.net = SRNet()
-        self.net.to(self.device)
+        self.net = self.net.to(self.device)
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8

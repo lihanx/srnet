@@ -9,9 +9,9 @@ from typing import Tuple, Sequence, List, Union
 from PIL import Image
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, RandomResizedCrop
+from torch.utils.data import Dataset
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,9 @@ class RandAugmentationDataSet(Dataset):
             "ratio": [3.0 / 4.0, 4.0 / 3.0],
             "scale": [0.8, 1.2],
         }
+        self._origin, self._reduced = None, None
+        self.rand_open_images()
+        self._cnt = 0
 
     @property
     def image_list(self):
@@ -204,21 +207,27 @@ class RandAugmentationDataSet(Dataset):
     def __len__(self):
         return self.limit
 
-    def __getitem__(self, item):
+    def rand_open_images(self):
+        if self._origin is not None:
+            del self._origin
+        if self._reduced is not None:
+            del self._reduced
         origin_file, reduced_file = self._rand_image_file()
-        with Image.open(origin_file) as origin_pil, \
-                Image.open(reduced_file) as reduced_pil:
-            origin, reduced = self.to_tensor(origin_pil, reduced_pil)
-            origin, reduced = origin.to(self.device), reduced.to(self.device)
-            origin, reduced = self.rand_transform(origin, reduced)
-            return origin, reduced
+        with Image.open(origin_file) as origin, \
+                Image.open(reduced_file) as reduced:
+            origin, reduced = self.to_tensor(origin, reduced)
+            self._origin, self._reduced = origin.to(self.device), reduced.to(self.device)
+
+    def __getitem__(self, item):
+        origin, reduced = self.rand_transform(self._origin, self._reduced)
+        return origin, reduced
 
 
 if __name__ == '__main__':
     cwd = os.path.abspath(os.path.dirname(__file__))
     image_dir = "images"
     dataset_dir = os.path.join(cwd, image_dir)
-    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1)
+    dataset = RandAugmentationDataSet(path=dataset_dir, origin_dir="origin", reduced_dir="reduced", limit=1, batch_size=16)
     from torchvision.transforms import functional as F
     # for origin, reduced in dataset:
     for i in range(20):
