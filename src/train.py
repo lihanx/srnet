@@ -47,8 +47,9 @@ class SRNetTrainer:
         self.test_dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
         self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        logger.info(f"use {self.device}")
         self.net = SRNet()
-        self.net.to(self.device)
+        self.net = self.net.to(self.device)
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8
@@ -71,6 +72,8 @@ class SRNetTrainer:
         }
         filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.4f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
+        weight_file = filename.replace("ckpt", "pth")
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, weight_file))
         logger.info(f"Checkpoint saved: {filename}")
 
     def load_checkpoints(self, checkpoint):
@@ -132,12 +135,13 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
-        best_loss = 0.3
+        best_loss = 0.18
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
-            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss} vloss-{vloss}")
+            lr = self.scheduler.get_last_lr()
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr[0]:.6f}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},

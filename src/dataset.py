@@ -193,7 +193,7 @@ class RandAugmentationDataSet(Dataset):
         # 缩放裁切 (256, 256)
         origin, reduced = self._rand_resizecrop(origin, reduced)
         # 高斯噪声
-        # origin, reduced = self._rand_noise(origin, reduced)
+        origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
         origin, reduced = self._rand_hflip(origin, reduced)
         # 随机垂直翻转
