@@ -39,10 +39,10 @@ class TransposeDecoder(nn.Module):
         for layer in self.modules():
             if isinstance(layer, nn.ConvTranspose2d):
                 nn.init.ones_(layer.weight)
+                if layer.bias is not None:
+                    nn.init.zeros_(layer.bias)
             elif isinstance(layer, nn.Conv2d):
                 nn.init.xavier_normal_(layer.weight)
-            if layer.bias is not None:
-                nn.init.zeros_(layer.bias)
 
     def _make_combine(self, inplanes, planes):
         return nn.Sequential(
