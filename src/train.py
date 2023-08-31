@@ -153,8 +153,6 @@ class SRNetTrainer:
             if vloss < best_loss:
                 self.save_checkpoints(epoch, vloss)
                 best_loss = vloss
-            elif epoch % 10 == 0:
-                self.save_checkpoints(epoch, vloss)
             if tloss <= limit and vloss <= limit:
                 logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
                 break
