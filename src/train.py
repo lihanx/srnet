@@ -155,6 +155,7 @@ class SRNetTrainer:
                 self.save_checkpoints(epoch, vloss)
                 best_loss = vloss
             if tloss <= limit and vloss <= limit:
+                self.save_checkpoints(epoch, vloss)
                 logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
                 break
         torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
