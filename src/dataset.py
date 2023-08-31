@@ -169,7 +169,7 @@ class RandAugmentationDataSet(Dataset):
         reduced_file = os.path.join(self.reduced_path, image_name)
         if not os.path.exists(reduced_file):
             raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
-        logger.info(f"Use {origin_file}")
+        logger.info(f"Use {image_name}")
         return origin_file, reduced_file
 
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
