@@ -69,8 +69,9 @@ class RandAugmentationDataSet(Dataset):
             "ratio": [3.0 / 4.0, 4.0 / 3.0],
             "scale": [0.8, 1.2],
         }
-        self._origin, self._reduced = None, None
-        self.rand_open_images()
+        self._origin = []
+        self._reduced = []
+        self.init_images()
         self._cnt = 0
 
     @property
@@ -161,17 +162,6 @@ class RandAugmentationDataSet(Dataset):
                     reduced = F.adjust_hue(reduced, hue_factor)
         return origin, reduced
 
-    def _rand_image_file(self):
-        """随机获取文件
-        train 与 test 同名对应"""
-        image_name = random.choice(self.image_list)
-        origin_file = os.path.join(self.origin_path, image_name)
-        reduced_file = os.path.join(self.reduced_path, image_name)
-        if not os.path.exists(reduced_file):
-            raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
-        logger.info(f"Use {image_name}")
-        return origin_file, reduced_file
-
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
         i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
@@ -208,19 +198,33 @@ class RandAugmentationDataSet(Dataset):
     def __len__(self):
         return self.limit
 
-    def rand_open_images(self):
-        if self._origin is not None:
-            del self._origin
-        if self._reduced is not None:
-            del self._reduced
-        origin_file, reduced_file = self._rand_image_file()
-        with Image.open(origin_file) as origin, \
-                Image.open(reduced_file) as reduced:
-            origin, reduced = self.to_tensor(origin, reduced)
-            self._origin, self._reduced = origin.to(self.device), reduced.to(self.device)
+    def init_images(self):
+        if self._origin is None:
+            self._origin = []
+        if self._reduced is None:
+            self._reduced = []
+        for image_name in self.image_list:
+            origin_file = os.path.join(self.origin_path, image_name)
+            reduced_file = os.path.join(self.reduced_path, image_name)
+            with Image.open(origin_file) as origin, \
+                    Image.open(reduced_file) as reduced:
+                origin, reduced = self.to_tensor(origin, reduced)
+                self._origin.append(origin)
+                self._reduced.append(origin)
+        logger.info("Image Tensors init.")
+
+    def _rand_image_tensor(self):
+        """随机获取文件
+        train 与 test 同名对应"""
+        if not self._image_list:
+            raise ValueError("Empty Image List")
+        idx = random.randrange(len(self.image_list))
+        # logger.info(f"Use Image-{idx}")
+        return self._origin[idx], self._reduced[idx]
 
     def __getitem__(self, item):
-        origin, reduced = self.rand_transform(self._origin, self._reduced)
+        origin, reduced = self._rand_image_tensor()
+        origin, reduced = self.rand_transform(origin.to(self.device), reduced.to(self.device))
         return origin, reduced
 
 

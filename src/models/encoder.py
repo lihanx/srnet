@@ -20,7 +20,7 @@ class ResidualEncoder(nn.Module):
             nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False),
             self._norm_layer(self.inplanes),
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=3, stride=2, padding=1),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
         self.res_1 = self._make_layer(Bottleneck, 64, 2)
         self.res_2 = self._make_layer(Bottleneck, 128, 2, stride=2)
