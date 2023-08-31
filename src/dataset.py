@@ -62,7 +62,7 @@ class RandAugmentationDataSet(Dataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.03,
+            "std": 0.01,
         }
         # resize params
         self.resizecrop_options = {
