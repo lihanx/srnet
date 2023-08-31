@@ -28,21 +28,14 @@ class TransposeDecoder(nn.Module):
 
         self.head = nn.Sequential(
             self._make_transpose(TransposeBasicBlock, 64, 2, stride=1),
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=True),
+            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=False),
             nn.Conv2d(64, 64, kernel_size=2, stride=1, padding=0),
             self._norm_layer(64),
-            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=2, bias=True),
-            nn.Conv2d(3, 3, kernel_size=2, stride=1, padding=0),
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.Conv2d(64, 3, kernel_size=1, stride=1, bias=False),
             self._norm_layer(3),
             nn.ReLU(inplace=True)
         )
-        for layer in self.modules():
-            if isinstance(layer, nn.ConvTranspose2d):
-                nn.init.ones_(layer.weight)
-                if layer.bias is not None:
-                    nn.init.zeros_(layer.bias)
-            elif isinstance(layer, nn.Conv2d):
-                nn.init.xavier_normal_(layer.weight)
 
     def _make_combine(self, inplanes, planes):
         return nn.Sequential(
