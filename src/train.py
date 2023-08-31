@@ -49,7 +49,7 @@ class SRNetTrainer:
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8
-        self.lr_epoch_per_decay = 100
+        self.lr_epoch_per_decay = 50
         self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
@@ -57,6 +57,7 @@ class SRNetTrainer:
             self.load_checkpoints(checkpoint)
         else:
             self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d%H%M%S}"))
+
     def rand_init_dataset(self):
         self.train_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
         self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size)

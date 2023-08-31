@@ -21,25 +21,28 @@ class TransposeDecoder(nn.Module):
         self.up_res1 = self._make_transpose(TransposeBasicBlock, 1024, 2, stride=2)
         self.up_res2 = self._make_transpose(TransposeBasicBlock, 512, 2, stride=2)
         self.up_res3 = self._make_transpose(TransposeBasicBlock, 256, 2, stride=2)
-        self.up_res4 = self._make_transpose(TransposeBasicBlock, 64, 2, stride=1)
 
         self.concat_1 = self. _make_combine(1024*2, 1024)
         self.concat_2 = self. _make_combine(512*2, 512)
         self.concat_3 = self. _make_combine(256*2, 256)
-        self.concat_4 = self. _make_combine(64*2, 64)
 
         self.head = nn.Sequential(
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=2, stride=2, bias=False),
+            self._make_transpose(TransposeBasicBlock, 64, 2, stride=1),
+            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=True),
+            nn.Conv2d(64, 64, kernel_size=2, stride=1, padding=0),
             self._norm_layer(64),
-            nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=True),
+            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=True),
+            nn.Conv2d(64, 3, kernel_size=1, stride=1, bias=True),
             self._norm_layer(3),
             nn.ReLU(inplace=True)
         )
         for layer in self.modules():
             if isinstance(layer, nn.ConvTranspose2d):
                 nn.init.ones_(layer.weight)
-                if layer.bias is not None:
-                    nn.init.zeros_(layer.bias)
+            elif isinstance(layer, nn.Conv2d):
+                nn.init.xavier_normal_(layer.weight)
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)
 
     def _make_combine(self, inplanes, planes):
         return nn.Sequential(
@@ -84,8 +87,6 @@ class TransposeDecoder(nn.Module):
 
         out = self.up_res3(out)
         out = self.concat_3(torch.concat([out, f1], dim=1))
-
-        out = self.up_res4(out)
 
         out = self.head(out)
         return out

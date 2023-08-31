@@ -1,0 +1,6 @@
+#!/bin/bash
+
+conda create --name srnet python=3.10
+conda activate srnet
+conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install tensorboard
