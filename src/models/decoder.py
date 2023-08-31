@@ -31,8 +31,8 @@ class TransposeDecoder(nn.Module):
             nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=True),
             nn.Conv2d(64, 64, kernel_size=2, stride=1, padding=0),
             self._norm_layer(64),
-            nn.ConvTranspose2d(self.inplanes, 64, kernel_size=3, stride=2, bias=True),
-            nn.Conv2d(64, 3, kernel_size=1, stride=1, bias=True),
+            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=2, bias=True),
+            nn.Conv2d(3, 3, kernel_size=2, stride=1, padding=0),
             self._norm_layer(3),
             nn.ReLU(inplace=True)
         )
