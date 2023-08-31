@@ -36,6 +36,10 @@ class SRNetTrainer:
         self.data_count = 1600
         self.earlystop_at = earlystop_at
         self.cwd = cwd = os.path.abspath(os.path.dirname(__file__))
+        self.train_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
+        self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size)
+        self.test_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
+        self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
         _check_dir(self.checkpoint_path)
         self.summary_path = os.path.join(cwd, "runs")
@@ -57,12 +61,6 @@ class SRNetTrainer:
             self.load_checkpoints(checkpoint)
         else:
             self.summary_writer = SummaryWriter(os.path.join(self.summary_path, f"srnet_trainer_{self._training_date:%Y%m%d%H%M%S}"))
-
-    def rand_init_dataset(self):
-        self.train_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
-        self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size)
-        self.test_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
-        self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
 
     def save_checkpoints(self, epoch, loss_val) -> None:
         checkpoint = {
@@ -139,7 +137,6 @@ class SRNetTrainer:
         limit = self.earlystop_at
         best_loss = 0.18
         for epoch in range(self.last_epoch+1, self.epochs+1):
-            self.rand_init_dataset()
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
