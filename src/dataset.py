@@ -210,7 +210,7 @@ class RandAugmentationDataSet(Dataset):
                     Image.open(reduced_file) as reduced:
                 origin, reduced = self.to_tensor(origin, reduced)
                 self._origin.append(origin)
-                self._reduced.append(origin)
+                self._reduced.append(reduced)
         logger.info("Image Tensors init.")
 
     def _rand_image_tensor(self):

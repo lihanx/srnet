@@ -57,6 +57,7 @@ class SRNetTrainer:
         self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
+        self.best_loss = 0.18
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
@@ -69,6 +70,7 @@ class SRNetTrainer:
             "schedular_state_dict": self.scheduler.state_dict(),
             "epoch": epoch,
             "loss_state_dict": self.loss_fn.state_dict(),
+            "best_loss": self.best_loss,
         }
         filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.4f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
@@ -83,6 +85,7 @@ class SRNetTrainer:
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         self.scheduler.load_state_dict(ckpt["schedular_state_dict"])
         self.last_epoch = ckpt["epoch"]
+        self.best_loss = ckpt["best_loss"]
         self.loss_fn.load_state_dict(ckpt["loss_state_dict"])
         d = checkpoint.split("_")[1]
         self._training_date = datetime.datetime.strptime(d, "%Y%m%d%H%M%S")
@@ -135,7 +138,6 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
-        best_loss = 0.18
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
@@ -148,14 +150,14 @@ class SRNetTrainer:
                 epoch
             )
             self.scheduler.step()
-            if vloss < best_loss:
+            if vloss < self.best_loss:
                 self.save_checkpoints(epoch, vloss)
-                best_loss = vloss
+                self.best_loss = vloss
             if tloss <= limit and vloss <= limit:
                 self.save_checkpoints(epoch, vloss)
-                logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
+                logger.info(f"SSIM >= {1-self.best_loss}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
+        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{self.best_loss}.pth"))
         logger.info("Model saved.")
         logger.info("Done.")
 
