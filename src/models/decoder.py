@@ -30,8 +30,6 @@ class TransposeDecoder(nn.Module):
             self._make_transpose(TransposeBasicBlock, 64, 2, stride=2),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(64, 3, kernel_size=1, stride=1, bias=False),
-            self._norm_layer(3),
-            nn.ReLU(inplace=True)
         )
 
     def _make_combine(self, inplanes, planes):
