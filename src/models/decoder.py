@@ -28,10 +28,6 @@ class TransposeDecoder(nn.Module):
 
         self.head = nn.Sequential(
             self._make_transpose(TransposeBasicBlock, 128, 3),
-            # ==== Raw ====
-            # nn.UpsamplingBilinear2d(scale_factor=2),
-            # nn.Conv2d(64, 3, kernel_size=1, stride=1, bias=False),
-            # ==== Test ====
             nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2, bias=False),
             nn.ConvTranspose2d(64, 3, kernel_size=2, stride=2, bias=False),
             self._norm_layer(3),
