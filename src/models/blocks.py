@@ -17,11 +17,10 @@ class TransposeBasicBlock(nn.Module):
         super().__init__()
         self.conv1 = conv3x3(inplanes, inplanes)
         self.bn1 = nn.BatchNorm2d(inplanes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.PReLU()
         if upsample is not None and stride != 1:
             self.conv2 = nn.ConvTranspose2d(inplanes, planes,
-                                            kernel_size=3, stride=stride, padding=1,
-                                            output_padding=1, bias=False)
+                                            kernel_size=2, stride=stride, bias=False)
         else:
             self.conv2 = conv3x3(inplanes, planes, stride)
         self.bn2 = nn.BatchNorm2d(planes)
@@ -33,7 +32,7 @@ class TransposeBasicBlock(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
-        # out = self.relu(out)
+        out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -56,8 +55,7 @@ class TransposeBottleneck(nn.Module):
         self.bn1 = nn.BatchNorm2d(planes)
         if upsample is not None and stride != 1:
             self.conv2 = nn.ConvTranspose2d(planes, planes//self.expansion,
-                                            kernel_size=3, stride=stride, padding=1,
-                                            output_padding=1, bias=False)
+                                            kernel_size=2, stride=stride, bias=False)
         else:
             self.conv2 = conv3x3(planes, planes//self.expansion, stride)
         self.bn2 = nn.BatchNorm2d(planes//self.expansion)
@@ -65,7 +63,7 @@ class TransposeBottleneck(nn.Module):
         self.stride = stride
         self.conv3 = conv1x1(int(planes//self.expansion), planes)
         self.bn3 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.PReLU()
 
     def forward(self, x):
         identity = x
