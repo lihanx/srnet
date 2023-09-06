@@ -99,9 +99,13 @@ class SRNetTransformer:
                     # concat
                     for idx, p in enumerate(transformed):
                         if self.verbose:
-                            save_puzzles(p, output_path, idx)
-                            psnr = get_psnr(batch[idx], p)
-                            ssim = get_ssim(batch[idx], p)
+                            base = pos_y//self.inplanes*1000+idx*100
+                            save_puzzles(p, output_path, base+1)
+                            raw = batch[idx].detach()
+                            save_puzzles(raw, output_path, base+0)
+                            raw = raw.unsqueeze(0)
+                            psnr = get_psnr(raw, p)
+                            ssim = get_ssim(raw, p)
                             logger.info(f"{idx}-PSNR: {psnr} SSIM: {ssim}")
                         pos_x = idx * self.inplanes
                         new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
