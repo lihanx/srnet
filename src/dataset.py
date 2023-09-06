@@ -3,7 +3,7 @@
 import os
 import logging
 import random
-import time
+import math
 from typing import Tuple, Sequence, List, Union
 
 from PIL import Image
@@ -62,7 +62,7 @@ class RandAugmentationDataSet(Dataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.01,
+            "ratio": 0.08,
         }
         # resize params
         self.resizecrop_options = {
@@ -128,19 +128,17 @@ class RandAugmentationDataSet(Dataset):
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
-        if torch.rand(1) < 0.5:
-            g_origin: Image = F.to_pil_image(origin, mode="RGB")
-            g_origin = g_origin.convert("L")
-            g_tensor = F.to_tensor(g_origin)
-            max_val = torch.max(g_tensor)
-            mask = (g_tensor < 0.5 * max_val).int() * (g_tensor > 0.2 * max_val).int()
-            _, h, w = origin.shape
-            _noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=(1, h, w))
+        if torch.rand(1) < 0.6:
+            max_val = torch.max(origin)
+            median_val = torch.median(origin)
+            std = self.noise_options["ratio"] * median_val
+            mask = (origin < 0.95 * max_val).int()
+            c, h, w = origin.shape
+            _noise = torch.normal(self.noise_options["mean"], std, size=(c, h, w)) * math.sqrt(0.5)
+            _noise = _noise.to(origin.device)
+            mask = mask.to(origin.device)
             _noise *= mask
-            noise = torch.zeros_like(origin)
-            noise[random.randrange(3),:,:] = _noise
-            noise = noise.to(origin.device)
-            origin.add_(noise)
+            origin.add_(_noise)
         return origin, reduced
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
@@ -165,7 +163,7 @@ class RandAugmentationDataSet(Dataset):
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
         i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
-            ratio = torch.empty(1).uniform_(0.2, 1.4).item()
+            ratio = torch.empty(1).uniform_(0.2, 1.5).item()
             h = int(h * ratio)
             w = int(w * ratio)
             origin = F.crop(origin, i, j, h, w)
@@ -184,7 +182,7 @@ class RandAugmentationDataSet(Dataset):
         # 缩放裁切 (256, 256)
         origin, reduced = self._rand_resizecrop(origin, reduced)
         # 高斯噪声
-        # origin, reduced = self._rand_noise(origin, reduced)
+        origin, reduced = self._rand_noise(origin, reduced)
         # 随机水平翻转
         origin, reduced = self._rand_hflip(origin, reduced)
         # 随机垂直翻转
@@ -240,9 +238,9 @@ if __name__ == '__main__':
         print(origin.shape, reduced.shape)
         origin = F.to_pil_image(origin, mode="RGB")
         origin.show()
-        reduced = F.to_pil_image(reduced, mode="RGB")
-        reduced.show()
-        break
+        # reduced = F.to_pil_image(reduced, mode="RGB")
+        # reduced.show()
+        # break
     # from torch.utils.data import DataLoader
     #
     # loader = DataLoader(dataset=dataset, batch_size=64)

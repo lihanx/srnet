@@ -143,7 +143,8 @@ class SRNetTrainer:
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
-            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f}")
+            lr = min(group['lr'] for group in self.optimizer.param_groups)
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr:.10f}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},
@@ -166,7 +167,7 @@ def parse_train_args(args):
     parser = ArgumentParser()
     parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
     parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
-    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.03)
+    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.05)
     parser.add_argument("--checkpoint", help="指定保存的断点名称，继续进行训练", default=None)
     return parser.parse_args(args)
 

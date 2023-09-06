@@ -12,7 +12,7 @@ from torch import Tensor
 from torchvision.transforms import functional as F
 
 from models.srnet import SRNet
-from utils import _save_weight_from_checkpoint
+from utils import _save_weight_from_checkpoint, save_puzzles, get_psnr, get_ssim
 
 
 logger = logging.getLogger(__file__)
@@ -23,10 +23,12 @@ class SRNetTransformer:
     def __init__(self,
                  weight_name: Union[str, None],
                  checkpoint_name: Union[str, None] = None,
-                 device_name: Union[str, None] = "cuda"):
+                 device_name: Union[str, None] = "cuda",
+                 verbose: bool = False):
         self.inplanes = 256
         self.device = torch.device(device_name)
         self.net = SRNet()
+        self.verbose = verbose
         cwd = os.getcwd()
         if weight_name is not None:
             weight_path = os.path.join(cwd, f"weights/{weight_name}")
@@ -96,6 +98,11 @@ class SRNetTransformer:
                     # copy 到新 tensor 的对应位置
                     # concat
                     for idx, p in enumerate(transformed):
+                        if self.verbose:
+                            save_puzzles(p, output_path, idx)
+                            psnr = get_psnr(batch[idx], p)
+                            ssim = get_ssim(batch[idx], p)
+                            logger.info(f"{idx}-PSNR: {psnr} SSIM: {ssim}")
                         pos_x = idx * self.inplanes
                         new_img_tensor[:, pos_x:pos_x+self.inplanes, pos_y:pos_y+self.inplanes] = p[:, :, :]
                 # remove padding
@@ -104,6 +111,10 @@ class SRNetTransformer:
                 # save
                 new_img.save(output_path)
                 logger.info(f"Save image: {output_path}.")
+                if self.verbose:
+                    total_psnr = get_psnr(img_tensor, new_img_tensor)
+                    total_ssim = get_ssim(img_tensor, new_img_tensor)
+                    logger.info(f"Image PSNR: {total_psnr} SSIM: {total_ssim}")
                 logger.info("Done.")
         return None
 
@@ -115,6 +126,7 @@ def parse_inference_args(args):
     parser.add_argument("--weight", required=False, default=None)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--verbose", action="store_true", default=False)
     return parser.parse_args(args)
 
 
@@ -124,5 +136,5 @@ if __name__ == '__main__':
     if not output:
         image_path, ext = os.path.splitext(args.image)
         output = f"{image_path}_reduced{ext}"
-    transformer = SRNetTransformer(args.weight, args.checkpoint, args.device)
+    transformer = SRNetTransformer(args.weight, args.checkpoint, args.device, args.verbose)
     transformer.transform(image_path=args.image, output_path=output)

@@ -4,6 +4,10 @@ import os
 import logging
 
 import torch
+from torchvision.transforms import functional as F
+
+from loss.ssim import SSIMFunc
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +22,7 @@ def _save_weight_from_checkpoint(ckpt, weight_path):
     torch.save(ckpt["model_state_dict"], weight_path)
     logger.info(f"Model weights saved: {weight_path}")
 
-# todo PSNR
+
 def get_psnr(img1: torch.Tensor, img2: torch.Tensor):
     """
     PSNR接近 50dB ，代表压缩后的图像仅有些许非常小的误差。
@@ -31,6 +35,18 @@ def get_psnr(img1: torch.Tensor, img2: torch.Tensor):
     mse = torch.mean((img1 - img2) ** 2)
     return 10 * torch.log10(torch.max(img1).item() * 2 / mse)
 
-# todo PSF
 
-# todo save single output
+def save_puzzles(img: torch.Tensor, output_path, idx):
+    filepath, filename = os.path.split(output_path)
+    name, ext = os.path.splitext(filename)
+    dirpath = os.path.join(filepath, f"{name}_puzzles")
+    if not os.path.isdir(dirpath):
+        os.mkdir(dirpath)
+    output_name = f"{name}_{idx}{ext}"
+    output_path = os.path.join(dirpath, output_name)
+    pil_img = F.to_pil_image(img, mode="RGB")
+    pil_img.save(output_path)
+    logger.info(f"{output_path} saved.")
+
+
+get_ssim = SSIMFunc(window_size=11)
