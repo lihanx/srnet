@@ -165,9 +165,9 @@ class RandAugmentationDataSet(Dataset):
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
         i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
-            ratio = torch.empty(1).uniform_(0.6, 1.4).item()
+            ratio = torch.empty(1).uniform_(0.2, 1.4).item()
             h = int(h * ratio)
-            w = int(w / ratio)
+            w = int(w * ratio)
             origin = F.crop(origin, i, j, h, w)
             origin = F.resize(origin, list(self.output_size), antialias=None)
             reduced = F.crop(reduced, i, j, h, w)

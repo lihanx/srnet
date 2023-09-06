@@ -16,10 +16,12 @@ class ResidualEncoder(nn.Module):
         self.groups = 1
         self.base_width = 64
         self._norm_layer = nn.BatchNorm2d
-        self.stem = nn.Sequential(
+        self.first_conv = nn.Sequential(
             nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False),
             self._norm_layer(self.inplanes),
             nn.ReLU(inplace=True),
+        )
+        self.stem = nn.Sequential(
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
         self.res_1 = self._make_layer(Bottleneck, 64, 2)
@@ -70,12 +72,13 @@ class ResidualEncoder(nn.Module):
 
 
     def forward(self, x: Tensor):
-        out = self.stem(x)
+        out = r = self.first_conv(x)
+        out = self.stem(out)
         out = f1 = self.res_1(out)
         out = f2 = self.res_2(out)
         out = f3 = self.res_3(out)
         out = self.res_4(out)
-        return f1, f2, f3, out
+        return r, f1, f2, f3, out
 
 
 if __name__ == '__main__':

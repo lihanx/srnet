@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import RandAugmentationDataSet
@@ -31,9 +31,9 @@ class SRNetTrainer:
                  earlystop_at: float = 0.3,
                  checkpoint: Union[None, str] = None):
         self.epochs = epoch
-        self.learning_rate = 1e-4
+        self.learning_rate = 1e-3
         self.batch_size = batch_size
-        self.data_count = 1600
+        self.data_count = batch_size * 100
         self.earlystop_at = earlystop_at
         self.cwd = cwd = os.path.abspath(os.path.dirname(__file__))
         self.train_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
@@ -53,11 +53,12 @@ class SRNetTrainer:
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8
-        self.lr_epoch_per_decay = 50
-        self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
+        self.lr_epoch_per_decay = 10
+        # self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode="min", patience=self.lr_epoch_per_decay, factor=self.lr_decay_rate, verbose=True)
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
-        self.best_loss = 0.18
+        self.best_loss = 0.15
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
@@ -142,14 +143,13 @@ class SRNetTrainer:
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
             vloss = self._test(epoch)
-            lr = self.scheduler.get_last_lr()
-            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr[0]:.6f}")
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},
                 epoch
             )
-            self.scheduler.step()
+            self.scheduler.step(vloss)
             if vloss < self.best_loss:
                 self.save_checkpoints(epoch, vloss)
                 self.best_loss = vloss
@@ -166,7 +166,7 @@ def parse_train_args(args):
     parser = ArgumentParser()
     parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
     parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
-    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.05)
+    parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.03)
     parser.add_argument("--checkpoint", help="指定保存的断点名称，继续进行训练", default=None)
     return parser.parse_args(args)
 
