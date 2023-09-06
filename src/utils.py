@@ -39,6 +39,7 @@ def get_psnr(img1: torch.Tensor, img2: torch.Tensor):
 def save_puzzles(img: torch.Tensor, output_path, idx):
     filepath, filename = os.path.split(output_path)
     name, ext = os.path.splitext(filename)
+    ext = ".jpg"
     dirpath = os.path.join(filepath, f"{name}_puzzles")
     if not os.path.isdir(dirpath):
         os.mkdir(dirpath)
