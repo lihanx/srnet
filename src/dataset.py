@@ -62,11 +62,10 @@ class RandAugmentationDataSet(Dataset):
         # noise params
         self.noise_options = {
             "mean": 0,
-            "ratio": 0.08,
+            "ratio": [0.08, 0.13],
         }
         # resize params
         self.resizecrop_options = {
-            "ratio": [3.0 / 4.0, 4.0 / 3.0],
             "scale": [0.8, 1.2],
         }
         self._origin = []
@@ -131,7 +130,8 @@ class RandAugmentationDataSet(Dataset):
         if torch.rand(1) < 0.6:
             max_val = torch.max(origin)
             median_val = torch.median(origin)
-            std = self.noise_options["ratio"] * median_val
+            ratio = torch.empty(1).uniform_(self.noise_options["ratio"][0], self.noise_options["ratio"][1]).item()
+            std = ratio * median_val
             mask = (origin < 0.95 * max_val).int()
             c, h, w = origin.shape
             _noise = torch.normal(self.noise_options["mean"], std, size=(c, h, w)) * math.sqrt(0.5)
@@ -163,7 +163,7 @@ class RandAugmentationDataSet(Dataset):
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
         i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
-            ratio = torch.empty(1).uniform_(0.2, 1.5).item()
+            ratio = torch.empty(1).uniform_(self.resizecrop_options["scale"][0], self.resizecrop_options["scale"][1]).item()
             h = int(h * ratio)
             w = int(w * ratio)
             origin = F.crop(origin, i, j, h, w)
