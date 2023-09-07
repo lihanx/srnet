@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class SRNetTrainer:
 
     def __init__(self,
-                 epoch: int = 10000,
+                 epoch: int = 100,
                  batch_size: int = 16,
                  earlystop_at: float = 0.3,
                  checkpoint: Union[None, str] = None):
@@ -139,10 +139,11 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
+        last_loss = 0
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
-            vloss = self._test(epoch)
+            last_loss = vloss = self._test(epoch)
             lr = min(group['lr'] for group in self.optimizer.param_groups)
             logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr:.10f}")
             self.summary_writer.add_scalars(
@@ -158,14 +159,15 @@ class SRNetTrainer:
                 self.save_checkpoints(epoch, vloss)
                 logger.info(f"SSIM >= {1-self.best_loss}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{self.best_loss}.pth"))
+        else:
+            self.save_checkpoints(self.epochs, last_loss)
         logger.info("Model saved.")
         logger.info("Done.")
 
 
 def parse_train_args(args):
     parser = ArgumentParser()
-    parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
+    parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=100)
     parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
     parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.05)
     parser.add_argument("--checkpoint", help="指定保存的断点名称，继续进行训练", default=None)

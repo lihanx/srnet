@@ -54,9 +54,9 @@ class RandAugmentationDataSet(Dataset):
         }
         # color params
         self.color_options = {
-            "brightness": None,
-            "contrast": None,
-            "saturation": None,
+            "brightness": [0.9, 1.5],
+            "contrast": [0.8, 1.5],
+            "saturation": [0.8, 1.5],
             "hue": [-0.5, 0.5]
         }
         # noise params
