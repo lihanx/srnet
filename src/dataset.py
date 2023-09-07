@@ -45,7 +45,7 @@ class RandAugmentationDataSet(Dataset):
         self.rotation_p = rotation_p
         self.color_distortion_p = color_distortion_p
         # rotation params
-        self.rotate_degrees = list(range(0, 181, 10)) if rotation_degrees is None else rotation_degrees
+        self.rotate_degrees = [0, 180] if rotation_degrees is None else rotation_degrees
         self.rotate_options = {
             "interpolation": F.InterpolationMode.BILINEAR,
             "expand": False,

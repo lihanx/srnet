@@ -58,7 +58,7 @@ class SRNetTrainer:
         self.scheduler = ReduceLROnPlateau(self.optimizer, mode="min", patience=self.lr_epoch_per_decay, factor=self.lr_decay_rate, verbose=True)
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
-        self.best_loss = 0.15
+        self.best_loss = 0.10
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
