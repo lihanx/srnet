@@ -3,15 +3,15 @@
 import os
 import logging
 import random
-import time
+import math
 from typing import Tuple, Sequence, List, Union
 
 from PIL import Image
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
-from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter, RandomResizedCrop
+from torch.utils.data import Dataset
+from torchvision.transforms import RandomCrop, RandomRotation, ColorJitter
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class RandAugmentationDataSet(Dataset):
         self.rotation_p = rotation_p
         self.color_distortion_p = color_distortion_p
         # rotation params
-        self.rotate_degrees = [30, 60, 90, 120, 150, 180, 210, 240, 270] if rotation_degrees is None else rotation_degrees
+        self.rotate_degrees = [0, 180] if rotation_degrees is None else rotation_degrees
         self.rotate_options = {
             "interpolation": F.InterpolationMode.BILINEAR,
             "expand": False,
@@ -54,21 +54,23 @@ class RandAugmentationDataSet(Dataset):
         }
         # color params
         self.color_options = {
-            "brightness": None,
-            "contrast": None,
-            "saturation": None,
-            "hue": [-0.3, 0.3]
+            "brightness": [0.9, 1.5],
+            "contrast": [0.8, 1.5],
+            "saturation": [0.8, 1.5],
+            "hue": [-0.5, 0.5]
         }
         # noise params
         self.noise_options = {
             "mean": 0,
-            "std": 0.03,
+            "ratio": [0.08, 0.13],
         }
         # resize params
         self.resizecrop_options = {
-            "ratio": [3.0 / 4.0, 4.0 / 3.0],
             "scale": [0.8, 1.2],
         }
+        self._origin = []
+        self._reduced = []
+        self.init_images()
 
     @property
     def image_list(self):
@@ -124,18 +126,18 @@ class RandAugmentationDataSet(Dataset):
 
     def _rand_noise(self, origin: Tensor, reduced: Tensor):
         # 高斯噪声
-        if torch.rand(1) < 0.5:
-            g_origin: Image = F.to_pil_image(origin, mode="RGB")
-            g_origin = g_origin.convert("L")
-            g_tensor = F.to_tensor(g_origin)
-            mask = (g_tensor < 0.5).int() * (g_tensor > 0.2).int()
-            _, h, w = origin.shape
-            _noise = torch.normal(self.noise_options["mean"], self.noise_options["std"], size=(1, h, w))
+        if torch.rand(1) < 0.6:
+            max_val = torch.max(origin)
+            median_val = torch.median(origin)
+            ratio = torch.empty(1).uniform_(self.noise_options["ratio"][0], self.noise_options["ratio"][1]).item()
+            std = ratio * median_val
+            mask = (origin < 0.95 * max_val).int()
+            c, h, w = origin.shape
+            _noise = torch.normal(self.noise_options["mean"], std, size=(c, h, w)) * math.sqrt(0.5)
+            _noise = _noise.to(origin.device)
+            mask = mask.to(origin.device)
             _noise *= mask
-            noise = torch.zeros_like(origin)
-            noise[random.randrange(3),:,:] = _noise
-            noise = noise.to(origin.device)
-            origin.add_(noise)
+            origin.add_(_noise)
         return origin, reduced
 
     def _rand_color_distort(self, origin: Tensor, reduced: Tensor):
@@ -157,22 +159,12 @@ class RandAugmentationDataSet(Dataset):
                     reduced = F.adjust_hue(reduced, hue_factor)
         return origin, reduced
 
-    def _rand_image_file(self):
-        """随机获取文件
-        train 与 test 同名对应"""
-        image_name = random.choice(self.image_list)
-        origin_file = os.path.join(self.origin_path, image_name)
-        reduced_file = os.path.join(self.reduced_path, image_name)
-        if not os.path.exists(reduced_file):
-            raise ValueError(f"File {image_name} not exists in {self.reduced_path}")
-        return origin_file, reduced_file
-
     def _rand_resizecrop(self, origin: Tensor, reduced: Tensor):
         i, j, h, w = RandomCrop.get_params(origin, self.output_size)
         if torch.rand(1) < 0.5:
-            ratio = torch.empty(1).uniform_(0.6, 1.4).item()
+            ratio = torch.empty(1).uniform_(self.resizecrop_options["scale"][0], self.resizecrop_options["scale"][1]).item()
             h = int(h * ratio)
-            w = int(w / ratio)
+            w = int(w * ratio)
             origin = F.crop(origin, i, j, h, w)
             origin = F.resize(origin, list(self.output_size), antialias=None)
             reduced = F.crop(reduced, i, j, h, w)
@@ -203,14 +195,34 @@ class RandAugmentationDataSet(Dataset):
     def __len__(self):
         return self.limit
 
+    def init_images(self):
+        if self._origin is None:
+            self._origin = []
+        if self._reduced is None:
+            self._reduced = []
+        for image_name in self.image_list:
+            origin_file = os.path.join(self.origin_path, image_name)
+            reduced_file = os.path.join(self.reduced_path, image_name)
+            with Image.open(origin_file) as origin, \
+                    Image.open(reduced_file) as reduced:
+                origin, reduced = self.to_tensor(origin, reduced)
+                self._origin.append(origin)
+                self._reduced.append(reduced)
+        logger.info("Image Tensors init.")
+
+    def _rand_image_tensor(self):
+        """随机获取文件
+        train 与 test 同名对应"""
+        if not self._image_list:
+            raise ValueError("Empty Image List")
+        idx = random.randrange(len(self.image_list))
+        # logger.info(f"Use Image-{idx}")
+        return self._origin[idx], self._reduced[idx]
+
     def __getitem__(self, item):
-        origin_file, reduced_file = self._rand_image_file()
-        with Image.open(origin_file) as origin_pil, \
-                Image.open(reduced_file) as reduced_pil:
-            origin, reduced = self.to_tensor(origin_pil, reduced_pil)
-            origin, reduced = origin.to(self.device), reduced.to(self.device)
-            origin, reduced = self.rand_transform(origin, reduced)
-            return origin, reduced
+        origin, reduced = self._rand_image_tensor()
+        origin, reduced = self.rand_transform(origin.to(self.device), reduced.to(self.device))
+        return origin, reduced
 
 
 if __name__ == '__main__':
@@ -225,9 +237,9 @@ if __name__ == '__main__':
         print(origin.shape, reduced.shape)
         origin = F.to_pil_image(origin, mode="RGB")
         origin.show()
-        reduced = F.to_pil_image(reduced, mode="RGB")
-        reduced.show()
-        break
+        # reduced = F.to_pil_image(reduced, mode="RGB")
+        # reduced.show()
+        # break
     # from torch.utils.data import DataLoader
     #
     # loader = DataLoader(dataset=dataset, batch_size=64)

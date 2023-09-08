@@ -4,7 +4,6 @@
 **/*.pyc
 **/checkpoints/
 **/checkpoints_backup/
-**/models/
 **/runs/
 **/runs_backup/
 **/weights/

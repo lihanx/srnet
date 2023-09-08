@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import RandAugmentationDataSet
@@ -26,36 +26,39 @@ logger = logging.getLogger(__name__)
 class SRNetTrainer:
 
     def __init__(self,
-                 epoch: int = 10000,
+                 epoch: int = 100,
                  batch_size: int = 16,
                  earlystop_at: float = 0.3,
                  checkpoint: Union[None, str] = None):
         self.epochs = epoch
-        self.learning_rate = 1e-4
+        self.learning_rate = 1e-3
         self.batch_size = batch_size
-        self.data_count = 1600
+        self.data_count = batch_size * 100
         self.earlystop_at = earlystop_at
-        cwd = os.path.abspath(os.path.dirname(__file__))
+        self.cwd = cwd = os.path.abspath(os.path.dirname(__file__))
+        self.train_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
+        self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size)
+        self.test_dataset = RandAugmentationDataSet(path=os.path.join(self.cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
+        self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
         self.checkpoint_path = os.path.join(cwd, "checkpoints")
         _check_dir(self.checkpoint_path)
         self.summary_path = os.path.join(cwd, "runs")
         _check_dir(self.summary_path)
         self.weight_path = os.path.join(cwd, "weights")
         _check_dir(self.weight_path)
-        self.train_dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
-        self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size)
-        self.test_dataset = RandAugmentationDataSet(path=os.path.join(cwd, "images"), origin_dir="origin", reduced_dir="reduced", limit=self.data_count)
-        self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        logger.info(f"use {self.device}")
         self.net = SRNet()
-        self.net.to(self.device)
+        self.net = self.net.to(self.device)
         self.optimizer = Adam(self.net.parameters(), lr=self.learning_rate)
         self.loss_fn = SSIMLoss()
         self.lr_decay_rate = 0.8
-        self.lr_epoch_per_decay = 20
-        self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
+        self.lr_epoch_per_decay = 30
+        # self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode="min", patience=self.lr_epoch_per_decay, factor=self.lr_decay_rate, verbose=True, min_lr=1e-5)
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
+        self.best_loss = 0.10
         if checkpoint is not None:
             self.load_checkpoints(checkpoint)
         else:
@@ -68,9 +71,12 @@ class SRNetTrainer:
             "schedular_state_dict": self.scheduler.state_dict(),
             "epoch": epoch,
             "loss_state_dict": self.loss_fn.state_dict(),
+            "best_loss": self.best_loss,
         }
         filename = f"checkpoint_{self._training_date:%Y%m%d%H%M%S}_epoch{epoch}_loss{loss_val:.4f}.ckpt"
         torch.save(checkpoint, os.path.join(self.checkpoint_path, filename))
+        # weight_file = filename.replace("ckpt", "pth")
+        # torch.save(self.net.state_dict(), os.path.join(self.weight_path, weight_file))
         logger.info(f"Checkpoint saved: {filename}")
 
     def load_checkpoints(self, checkpoint):
@@ -80,6 +86,7 @@ class SRNetTrainer:
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         self.scheduler.load_state_dict(ckpt["schedular_state_dict"])
         self.last_epoch = ckpt["epoch"]
+        self.best_loss = ckpt["best_loss"]
         self.loss_fn.load_state_dict(ckpt["loss_state_dict"])
         d = checkpoint.split("_")[1]
         self._training_date = datetime.datetime.strptime(d, "%Y%m%d%H%M%S")
@@ -132,34 +139,35 @@ class SRNetTrainer:
     def train(self):
         logger.info("Train start.")
         limit = self.earlystop_at
-        best_loss = 0.3
+        last_loss = 0
         for epoch in range(self.last_epoch+1, self.epochs+1):
             logger.info(f"Training Epoch {epoch}/{self.epochs}")
             tloss = self._train(epoch)
-            vloss = self._test(epoch)
-            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss} vloss-{vloss}")
+            last_loss = vloss = self._test(epoch)
+            lr = min(group['lr'] for group in self.optimizer.param_groups)
+            logger.info(f"Training Epoch {epoch} finished at: tloss-{tloss:.6f} vloss-{vloss:.6f} lr-{lr:.10f}")
             self.summary_writer.add_scalars(
                 "Training vs. Validation Loss",
                 {"Training": tloss, "Validation": vloss},
                 epoch
             )
-            self.scheduler.step()
-            if vloss < best_loss:
+            self.scheduler.step(vloss)
+            if vloss < self.best_loss:
                 self.save_checkpoints(epoch, vloss)
-                best_loss = vloss
-            elif epoch % 10 == 0:
-                self.save_checkpoints(epoch, vloss)
+                self.best_loss = vloss
             if tloss <= limit and vloss <= limit:
-                logger.info(f"SSIM >= {1-best_loss}, Stop Training.")
+                self.save_checkpoints(epoch, vloss)
+                logger.info(f"SSIM >= {1-self.best_loss}, Stop Training.")
                 break
-        torch.save(self.net.state_dict(), os.path.join(self.weight_path, f"srnet_{self._training_date:%Y%m%d%H%M%S}_loss{best_loss}.pth"))
+        else:
+            self.save_checkpoints(self.epochs, last_loss)
         logger.info("Model saved.")
         logger.info("Done.")
 
 
 def parse_train_args(args):
     parser = ArgumentParser()
-    parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=10000)
+    parser.add_argument("--epoch", type=int, help="指定训练 epoch", default=100)
     parser.add_argument("--batch_size", type=int, help="指定训练 batch_size", default=16)
     parser.add_argument("--earlystop_at", type=float, help="指定训练提前停止的阈值", default=0.05)
     parser.add_argument("--checkpoint", help="指定保存的断点名称，继续进行训练", default=None)
