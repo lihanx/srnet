@@ -70,8 +70,8 @@
 - [x] 命令行
   - [x] `python train.py --epoch 10000 --batch_size 16 --earlystop_at 0.3`
   - [x] `python transform.py --checkpoint filename`
-- [ ] 中间状态的 feature map 保存，用于论文图示
-- [ ] SSIM/PSNR 指标
+- [x] 保存处理过程，用于论文图示
+- [x] FWHM/PSNR 指标
 
 
 第一版
