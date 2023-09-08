@@ -55,7 +55,7 @@ class SRNetTrainer:
         self.lr_decay_rate = 0.8
         self.lr_epoch_per_decay = 30
         # self.scheduler = LambdaLR(optimizer=self.optimizer, lr_lambda=lambda epoch: self.lr_decay_rate ** (epoch // self.lr_epoch_per_decay))
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode="min", patience=self.lr_epoch_per_decay, factor=self.lr_decay_rate, verbose=True)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode="min", patience=self.lr_epoch_per_decay, factor=self.lr_decay_rate, verbose=True, min_lr=1e-5)
         self._training_date = datetime.datetime.now()
         self.last_epoch = 0
         self.best_loss = 0.10
