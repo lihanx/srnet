@@ -76,3 +76,9 @@
 
 第一版
 `checkpoint_20230817225353_epoch465_loss0.0965pth` 星点中心颜色异常
+
+第二版
+`checkpoint_20230906114951_epoch186_loss0.0309.ckpt` 目前为止效果最好的一版
+
+第三版
+`checkpoint_20230907153322_epoch244_loss0.0865.ckpt` 待测试
