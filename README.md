@@ -3,6 +3,35 @@
 用于深空摄影后期的星点缩减及降噪
 
 
+
+## 项目结构
+
+```text
+src
+	+-- images								# 数据集图片
+	| 	 	 +-- origin
+	|		 	 +-- reduced
+	|
+  +-- loss									# SSIMLoss
+  |      +-- ssim.py
+  |
+  +-- models
+  |	     +-- blocks.py			# 转置卷积 Block 定义
+  |	     +-- decoder.py			# 解码器定义
+  |	     +-- encoder.py			# 编码器定义
+  |	     +-- srnet.py				# 完整网络
+  |
+  +-- dataset.py						# 数据集定义（包含数据增强处理）
+  +-- train.py							# 训练流程
+  +-- transform.py					# 推理流程
+  +-- utils.py							# 工具函数
+```
+
+
+
+
+
+
 ## 数据集素材
 
 来自 [NOIRLab](https://noirlab.edu/public/) 公开的图像数据
