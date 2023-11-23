@@ -51,8 +51,8 @@ class SRNet(nn.Module):
         self.apply(init_weighs)
 
     def forward(self, x: Tensor):
-        r, f1, f2, f3, out = self.encoder(x)
-        out = self.decoder(out, f1, f2, f3, r)
+        f1, f2, f3, out = self.encoder(x)
+        out = self.decoder(out, f1, f2, f3)
         return out
 
 

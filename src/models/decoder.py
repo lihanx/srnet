@@ -70,7 +70,7 @@ class TransposeDecoder(nn.Module):
         self.inplanes = planes
         return nn.Sequential(*layers)
 
-    def forward(self, x: Tensor, f1: Tensor, f2: Tensor, f3: Tensor, r: Tensor):
+    def forward(self, x: Tensor, f1: Tensor, f2: Tensor, f3: Tensor):
         out = self.up_res1(x)
         out = self.concat_1(torch.concat([out, f3], dim=1))
 
@@ -81,8 +81,6 @@ class TransposeDecoder(nn.Module):
         out = self.concat_3(torch.concat([out, f1], dim=1))
 
         out = self.head(out)
-        out = self.concat_4(torch.concat([out, r], dim=1))
-
         out = self.final_conv(out)
         return out
 

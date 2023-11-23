@@ -72,13 +72,13 @@ class ResidualEncoder(nn.Module):
 
 
     def forward(self, x: Tensor):
-        out = r = self.first_conv(x)
+        out = self.first_conv(x)
         out = self.stem(out)
         out = f1 = self.res_1(out)
         out = f2 = self.res_2(out)
         out = f3 = self.res_3(out)
         out = self.res_4(out)
-        return r, f1, f2, f3, out
+        return f1, f2, f3, out
 
 
 if __name__ == '__main__':
